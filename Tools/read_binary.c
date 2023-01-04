@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 	int mf=floor(tf/dt);
 	
 	//-------------------------
-	fprintf(stderr,"Assuming %d channels %d long sampled at %lf Hz\n",n,m,1/dt);
+	fprintf(stderr,"Assuming %d channels %d units long sampled at %lf Hz\n",n,m,1/dt);
 	fprintf(stderr,"Output channel: %d\n",id);
 	fprintf(stderr,"From position %d to %d\n",m0,mf);
 	//-------------------------
