@@ -32,5 +32,14 @@ function read_channel(id,t0,tf) # Equivalent to the read_binary.c code
     return t, channel;
 end
 
-t,dat=read_channel(id,t0,tf);
+t,chdat=read_channel(id,t0,tf);
 
+using FFTW,Plots
+
+rate=2500.0;
+dt=1.0/rate;
+
+# freqs=fftfreq(length(t),2500)
+psd=abs2.(rfft(chdat))
+len=length(psd)
+freqs=collect(1:len)
