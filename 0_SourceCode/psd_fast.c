@@ -118,6 +118,9 @@ int main(int argc, char **argv ){
 //-------------------------------------------------------------------
 	/* Computing PSD and writting output */
 //-------------------------------------------------------------------
+// The power being multiplyed by dt and divided by the length.
+// This might not be what you want in some cases (this is basically a problem of units).
+
 	fprintf(stderr,"Start computing PSD\n");
 
         gsl_fft_real_radix2_transform (v, 1, length);

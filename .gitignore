@@ -1,3 +1,10 @@
+# Avoid huge and useless datafiles. 
+# Avoid also swap files from vim
+
 *dat
 *bin
 *mat
+*swp
+
+# Consider add an exception in the results folder:
+# !7_results/*

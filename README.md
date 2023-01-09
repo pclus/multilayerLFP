@@ -107,3 +107,19 @@ them to produce a spectral heatmap:
 df=0.019073486328125
 plot 'freqs.dat' matrix u (df*($2-1)):1:3 w ima
 ```
+
+The julia script `analysis.jl` also produces a heatmap `psd_mthm.dat` using a multitaper power spectra.
+You can plot the result using, for instance, the gnuplot calls:
+
+```
+df=0.00999996000016
+set logs zcb
+set cbrange[1e-18:1e-15]
+plot 'psd_mthm.dat' u (df*$1):2:3 matrix w ima
+```
+
+Next steps:
+
+1. Parallelize the julia code
+2. Time-freq analysis
+3. Post-data
