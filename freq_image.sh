@@ -14,6 +14,7 @@ done
 rm -f temp.dat
 rm -f temp2.dat
 rm -f psd_temp.dat
+mv freqs.dat 4_outputs/psd_rawhm.dat
 
 # create image using existing psd's using the filtered version:
 touch freqs_filtered.dat
@@ -24,4 +25,5 @@ do
         mv temp3.dat freqs_filtered.dat
 done
 rm -f temp2.dat
+mv freqs_filtered.dat 4_outputs/psd_gausshm.dat
 

@@ -3,11 +3,11 @@
 ## LFP Data:
 
 The "pre" data in the matlab file has been transcribed to a binary file using
-For convenience, a binary file with all the "pre" data has been stored in `Raw/pre.bin`.
+For convenience, a binary file with all the "pre" data has been stored in `1_Raw/pre.bin`.
 This file has been created by running this code in Matlab:
 
 ```
-mf=matfile('Raw/Suj9.mat');
+mf=matfile('1_Raw/Suj9.mat');
 pre=mf.Suj9(1,1);
 fid=fopen("pre.bin","w"); fwrite(fid,pre{1}(:,:),'double'); fclose(fid)
 ```
@@ -19,7 +19,7 @@ Source code is stored in the `Tools`directory.
 The usage of the function is 
 
 ```
-./readbin <infile> <outfile> <id> <t0> <t0>`
+./readbin <infile> <outfile> <id> <t0> <tf>`
 ```
 and outputs in `<outfile>` the time series of channel `<id>` (from 1 to 384)
 from time `<t0>` to `<tf>` (from 0 to 900).
@@ -27,7 +27,7 @@ The data must be stored in the binary `<infile>`.
 For example:
 
 ```
-./readbin Raw/pre.bin t2.dat 350 200 300
+./readbin 1_Raw/pre.bin t2.dat 350 200 300
 ```
 
 stores the time series of channel 350 from 200s to 300s to the t2.dat file.
@@ -38,7 +38,7 @@ If you do not want to use the binary file you can work directly in Matlab,
 outputting single channels:
 
 ```
-mf=matfile('Raw/Suj9.mat');
+mf=matfile('1_Raw/Suj9.mat');
 pre=mf.Suj9(1,1);
 
 i=1;
@@ -52,7 +52,7 @@ dlmwrite('pre1.dat',data,'delimiter',' ','precision','%.8g');
 ```
 Alternatively (not recommended), one can simply use:
 ```
-mf=matfile('Raw/Suj9.mat');
+mf=matfile('1_Raw/Suj9.mat');
 pre=mf.Suj9(1,1);
 dlmwrite('pre.dat',pre{1}(1,:),'delimiter','\n','precision','%.8g');
 ```
@@ -86,7 +86,7 @@ dlmwrite('mov_pre.dat',mov{1},' ')
 dlmwrite('mov_dur.dat',mov{2},' ')
 dlmwrite('mov_post.dat',mov{3},' ')
 ```
-This is done only once, and the results are stored in the "Raw" folder.
+This is done only once, and the results are stored in the "1_Raw" folder.
 
 
 ## Data Overview:
@@ -104,8 +104,10 @@ It can be used to generate psd for each channel and gather
 them to produce a spectral heatmap:
 
 ```
+set logs zcb;
+set cbrange[1e-18:1e-15]
 df=0.019073486328125
-plot 'freqs.dat' matrix u (df*($2-1)):1:3 w ima
+plot 'psd_rawhm.dat' matrix u (df*($2-1)):1:3 w ima
 ```
 
 The julia script `analysis.jl` also produces a heatmap `psd_mthm.dat` using a multitaper power spectra.
@@ -118,8 +120,19 @@ set cbrange[1e-18:1e-15]
 plot 'psd_mthm.dat' u (df*$1):2:3 matrix w ima
 ```
 
+The same script contains the function `timefreq` that can be used to perform a time-frequency heatmap
+for specific channels.
+In the case of segments of 10 seconds, the results outputted by `writedlm` can be plot in gnuplot with
+
+```
+set cbrange[1e-17:5e-15]
+set log zcb
+df=0.0999960001599936
+plot 'tfhm100.dat' mat u (10*$1):(df*$2):3 w ima
+```
+
 Next steps:
 
 1. Parallelize the julia code
-2. Time-freq analysis
+2. Time-freq analysis -> In current development
 3. Post-data

@@ -1,0 +1,144 @@
+\documentclass[ ]{standalone}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+%\usepackage[mathscr]{eucal}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{array}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{float}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage{tikz}
+\usetikzlibrary{tikzmark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{epstopdf}
+\usepackage{latexsym}
+\usepackage{keyval}
+\usepackage{ifthen}
+\usepackage{moreverb}
+%\usepackage{mathastext}
+\usepackage[shell,cleanup,subfolder]{gnuplottex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\definecolor{myBlue}{RGB}{0,84, 159}
+%\usepackage[lmargin=2cm,rmargin=0cm,tmargin=2cm,bmargin=2cm]{geometry}
+\usepackage[pass,paperwidth=8.5in,paperheight=11in]{geometry}
+%\geometry{
+%	paperwidth=30cm,
+%	paperheight=0cm,
+%	margin=2cm
+%}
+
+ \renewcommand{\familydefault}{\sfdefault}
+
+
+\begin{document} 
+%\begin{minipage}{800pt}
+% \hspace{1.5cm}\resizebox{750pt}{!}{\input{pp/diag}}\hspace*{0.550cm}\\[40pt]
+%\end{minipage}
+
+
+\begin{minipage}{15in}
+	\vspace*{0.7cm}
+	\hspace*{1.5cm}
+\begin{gnuplot}[terminal={epslatex},scale=0.9,terminaloptions={color size 15.75,2.5 rounded}]
+        set border lw 2
+        unset grid
+        unset key
+        set loadpath '~/Documents/Data/UPO-tACs/7_results/' '~/Documents/Data/UPO-tACs/1_Raw/'
+	set multiplot layout 1,2
+	set ytics 1e-6
+
+	set ylabel '\large LFP [V]'
+	set xlabel '\large $t$ [s]'
+	set yrange[-1.5e-6:1.5e-6]
+	plot 'mov_pre.dat' u 1:(-2e-6):(0):(4e-6) w vectors nohead lc 'gray' , 'ts_ch100.dat' ev 10 w l lc 1 lw 1
+
+	set xrange[200:204]
+	set key nobox
+	plot 'ts_ch100.dat' ev 10 w l lc 1 t 'Channel 100'
+
+
+\end{gnuplot}
+\vspace*{0.75cm}
+\centering
+\begin{gnuplot}[terminal={epslatex},scale=0.9,terminaloptions={color size 5.75,3.5 rounded}]
+
+        set border lw 2
+        unset grid
+        unset key
+        set loadpath '~/Documents/Data/UPO-tACs/7_results/'
+
+	set xrange[0:200]
+	set yrange[1e-18:1e-14]
+	set xlabel '\large Frequency [Hz]'
+	set ylabel '\large Power [V$^2$]'
+
+	df1=0.019073486328125
+	df2=0.00999996000016
+
+	set logs y
+
+	# For mthm is necessary to output the example in a different file with:
+	# awk 'NR==100{print $0}' psd_mthm.dat | tr " " "\n" > example_mthm.dat
+
+	set key top right nobox
+
+	plot 'psd_rawhm.dat' u (df1*$0):($100*2*pi) w l lw 0.1 lc 'gray' t 'Plain FFT' ,\
+		'example_mthm.dat' u (df2*$0):($1) w l lc 1 t '',\
+		'psd_gausshm.dat' u (df1*$0):($100*2*pi) w l lc 2 t 'Gaussian filter',\
+		100.0 w l lc 1 t 'Multitaper',\
+
+\end{gnuplot}
+\vspace*{0.75cm}
+\centering
+\begin{gnuplot}[terminal={epslatex},scale=0.9,terminaloptions={color size 15.75,3.5 rounded}]
+
+        set border lw 2
+        unset grid
+        unset key
+        set loadpath '~/Documents/Data/UPO-tACs/7_results/'
+	set multiplot layout 1,3
+
+	set xrange[0:200]
+	set yrange[0:384]
+	set ylabel '\large Channel'
+	set xlabel '\large Frequency [Hz]'
+
+	k=5 ; # skip data to reduce image size
+	# ---------------------------------------------------
+
+	df=0.019073486328125
+	set logs zcb
+	set cbrange[1e-18:1e-14]
+	set title '\large Plain FFT'
+
+	plot 'psd_rawhm.dat' matrix ev k u (df*($2-1)):1:($3*2*pi) w ima
+	#plot sin(x)
+
+	# ---------------------------------------------------
+
+	set title '\large FFT + Gaussian filter'
+	plot 'psd_gausshm.dat' matrix ev k u (df*($2-1)):1:($3*2*pi) w ima
+	#plot sin(x)
+
+	# ---------------------------------------------------
+
+	df=0.00999996000016
+	set logs zcb
+	set cbrange[1e-18:1e-14]
+	set title '\large Multitaper'
+	plot 'psd_mthm.dat' matrix ev k u (df*$1):2:3 w ima
+	#plot sin(x)
+
+	# ---------------------------------------------------
+
+	
+\end{gnuplot}
+\end{minipage}
+\end{document}
