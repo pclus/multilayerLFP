@@ -101,4 +101,4 @@ end
 
 
 a,b=heatmapMT(200.0,300.0)
-writedlm("../4_outputs/psd_mthm.dat","b"," ");
+writedlm("../4_outputs/psd_mthm.dat",b," ");
