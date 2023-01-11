@@ -4,6 +4,8 @@ t0=200;
 tf=300;
 id=350;
 
+# Reads the "pre" data for a specific channel and time window:
+# -------------------------------------------------------------
 function read_channel(id,t0,tf) # Equivalent to the read_binary.c code
     id=Int(id);
     fin=open("../1_Raw/pre.bin","r");
@@ -36,6 +38,7 @@ function read_channel(id,t0,tf) # Equivalent to the read_binary.c code
     return t, channel;
 end
 
+
 t,chdat=read_channel(id,t0,tf);
 
 # # Real FFT ------------------------------------------------
@@ -52,13 +55,13 @@ t,chdat=read_channel(id,t0,tf);
 #------------------------------------------------------------
 # Multitaper PSW
 #------------------------------------------------------------
-using Plots,Multitaper,StatsFuns ;
+using Plots,Multitaper;
 
 rate=2500.0;
 dt=1.0/rate;
 
 NW = 1.0*length(chdat)*dt/(2.0) ;  #bandwith is W*dt/2.0, and NW = N*W*dt/2.0
-K  = 10;    # number of tappers (should be less than 2*NW)
+K  = 50;    # number of tappers (should be less than 2*NW)
 S  = multispec(chdat, dt=dt, NW=NW, K=K,jk=true,Ftest=true, a_weight=true);
 
 plot(S.f,S.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
@@ -74,6 +77,7 @@ plot(S.f,S.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
 # Plot including 95% confidence intervals, as in the authomatic version...
 # does not look right...it seems that the authomatic recipe plots the confidence
 # for the log-spectra, and not the true spectra
+# using StatsFuns
 # z=norminvcdf(0,1,0.975);
 # plot(S.f,S.S,xlim=(0,200),ylim=(0,2e-16))
 # plot!(S.f,S.S.*exp.(-z*sqrt.(S.jkvar)),fillrange=S.S.*exp.(2*z*sqrt.(S.jkvar)),c=1,alpha=0.35)
@@ -121,12 +125,8 @@ writedlm("../4_outputs/psd_mthm.dat",b," ");
 # Time-frequency analysis
 #------------------------------------------------------------
 
-id=100;
-t0=200;
-tf=210;
-t,chdat=read_channel(id,t0,tf);
 
-using Plots,Multitaper,StatsFuns ;
+using Plots,Multitaper
 
 rate=2500.0;
 dt=1.0/rate;
@@ -171,3 +171,47 @@ end
 
 t,f,tfhm = timefreq(150);
 writedlm("../4_outputs/tfhm"*string(id)*".dat",tfhm," ");
+
+# authomatic removal of segments including movement
+# notice that this function assumes Δt=10
+function movfilter(tfhm)
+    mov_pre=readdlm("../1_Raw/mov_pre.dat",' ');
+    Δt=10.0;
+    mov_indx=Int.(floor.(mov_pre./Δt)*Δt.+5);
+    indx = t.∈ [mov_indx];
+    indx = findall(==(0),indx)
+    f_tfhm = tfhm[:,indx];
+    f_tfhm
+end
+
+f_tfhm = movfilter(tfhm);
+
+using Statistics
+mean_psd=mean(f_tfhm,dims=2);
+std_psd =std(f_tfhm,dims=2);
+plot(f,mean_psd,ribbon=std_psd,c=1,fillalpha=0.25)
+
+# Repeat the analysis for all channels and create the heatmaps
+n = 384;
+l = 2000;
+
+psd_mean_tfhm = zeros(n,l);
+psd_std_tfhm  = zeros(n,l);
+
+state = Threads.Atomic{Int}(0);
+
+# 
+Threads.@threads for id=1:n
+    Threads.atomic_add!(state, 1)
+    print("--> ",state[]," out of ",n,"\n");
+    flush(stdout);
+    t,f,tfhm = timefreq(id);
+    f_tfhm = movfilter(tfhm);
+    psd_mean_tfhm[id,:] = mean(f_tfhm,dims=2);  
+    psd_std_tfhm[id,:] = std(f_tfhm,dims=2);
+end
+
+writedlm("../4_outputs/psd_mean_tfhm.dat",psd_mean_tfhm',' ');
+writedlm("../4_outputs/psd_std_tfhm.dat",psd_std_tfhm',' ');
+
+heatmap(f,1:n,log.(psd_mean_tfhm))

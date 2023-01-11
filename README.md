@@ -128,11 +128,32 @@ In the case of segments of 10 seconds, the results outputted by `writedlm` can b
 set cbrange[1e-17:5e-15]
 set log zcb
 df=0.0999960001599936
-plot 'tfhm100.dat' mat u (10*$1):(df*$2):3 w ima
+plot 'tfhm100.dat' mat u (5+10*$1):(df*$2):3 w ima, '../../1_Raw/mov_pre.dat' u 1:(150)
+```
+
+Then, we can use the function `movfilter` to remove the data segments that
+contain movement recordings, and average then all the resulting PSDs to
+generate a global average heatmap.
+
+These can be plot for specific channels, including the standard deviations, in gnuplot:
+
+```
+df=0.1;
+id=150 # channel id
+comm="awk -v k=".id." 'NR==FNR{a[FNR]=$k} NR>FNR{b[FNR]=$k} END {for(i in a){print a[i],b[i]}}' psd_mean_tfhm.dat psd_std_tfhm.dat"
+plot "< ".comm u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5, '' u ($0*df):1 w l lc 1
+```
+
+or the total heatmap:
+
+```
+df=0.1
+set cbrange[1e-18:1e-15]
+plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 ```
 
 Next steps:
 
-1. Parallelize the julia code
-2. Time-freq analysis -> In current development
+1. Look for differences in time-frequency accross channels
+2. Tidy the julia script
 3. Post-data
