@@ -1,0 +1,111 @@
+\documentclass[ ]{standalone}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+%\usepackage[mathscr]{eucal}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{array}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{float}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage{tikz}
+\usetikzlibrary{tikzmark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{epstopdf}
+\usepackage{latexsym}
+\usepackage{keyval}
+\usepackage{ifthen}
+\usepackage{moreverb}
+%\usepackage{mathastext}
+\usepackage[shell,cleanup,subfolder]{gnuplottex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\definecolor{myBlue}{RGB}{0,84, 159}
+%\usepackage[lmargin=2cm,rmargin=0cm,tmargin=2cm,bmargin=2cm]{geometry}
+\usepackage[pass,paperwidth=8.5in,paperheight=11in]{geometry}
+%\geometry{
+%	paperwidth=30cm,
+%	paperheight=0cm,
+%	margin=2cm
+%}
+
+ \renewcommand{\familydefault}{\sfdefault}
+
+
+\begin{document} 
+%\begin{minipage}{800pt}
+% \hspace{1.5cm}\resizebox{750pt}{!}{\input{pp/diag}}\hspace*{0.550cm}\\[40pt]
+%\end{minipage}
+
+
+\begin{minipage}{16in}
+	\vspace*{0.7cm}
+	\hspace*{1.5cm}
+\begin{gnuplot}[terminal={epslatex},scale=0.9,terminaloptions={color size 15.75,6.5 rounded}]
+        set border lw 2
+        unset grid
+        unset key
+        set loadpath '~/Documents/Data/UPO-tACs/7_results/data-overview/' '~/Documents/Data/UPO-tACs/7_results/time-frequency/' '~/Documents/Data/UPO-tACs/1_Raw/'
+	set multiplot layout 2,2 columnsfirst
+	set ytics 1e-6
+
+	set lmargin 5
+	set rmargin 5
+
+	# ----------------------------------------------------------------
+	set ylabel '\large LFP [V]'
+	set xlabel '\large $t$ [s]'
+	set yrange[-1.5e-6:1.5e-6]
+	plot 'mov_pre.dat' u 1:(-2e-6):(0):(4e-6) w vectors nohead lc 'gray' , 'ts_ch100.dat' ev 10 w l lc 1 lw 1
+	# ----------------------------------------------------------------
+
+	# ----------------------------------------------------------------
+	set cbrange[1e-17:2e-15]
+	set xrange[0:900]
+	set yrange[0:80]
+	set ytics 10
+	set log zcb
+	df=0.0999960001599936
+	set xlabel '\large $t$ [s]'
+	set ylabel '\large Freq. [Hz]'
+	set colorbox user origin graph 1.02,0.0 size screen 0.01, graph 1.0
+	set pale @RAINBOW
+
+	plot 'tfhm100.dat' mat u (5+10*$1):(df*$2):3 w ima, '../../1_Raw/mov_pre.dat' u 1:(150)
+	# ----------------------------------------------------------------
+
+
+	# ----------------------------------------------------------------
+	df=0.1
+	set ytics 50
+	set xtics 10
+	set cbrange[1e-18:2e-15]
+	set xrange[0:80]
+	set yrange[0:384]
+	set ylabel '\large Channel '
+	set xlabel '\large Freq. [Hz]'
+	set size 0.3,0.5
+	set origin 0.6,0.5
+	set colorbox user origin graph 1.02,0.0 size screen 0.01, graph 1.0
+	plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
+	# ----------------------------------------------------------------
+
+	# ----------------------------------------------------------------
+	set size 0.3,0.5
+	set origin 0.6,0.0
+	set yrange[1e-18:2e-15]
+	set ytics 1e-15
+	set key nobox top right
+	plot 'psd_mean_tf_ch100.dat' u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 t '', '' u ($0*df):1 w l lc 1 t 'Ch. 100',\
+		'psd_mean_tf_ch200.dat' u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 transp lc 2 t '', '' u ($0*df):1 w l lc 2 t 'Ch. 200',\
+
+	# ----------------------------------------------------------------
+	
+\end{gnuplot}
+\end{minipage}
+\end{document}

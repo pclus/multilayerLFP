@@ -143,8 +143,15 @@ id=150 # channel id
 comm="awk -v k=".id." 'NR==FNR{a[FNR]=$k} NR>FNR{b[FNR]=$k} END {for(i in a){print a[i],b[i]}}' psd_mean_tfhm.dat psd_std_tfhm.dat"
 plot "< ".comm u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5, '' u ($0*df):1 w l lc 1
 ```
+In order to generate the files to plot externally use, in a terminal,
 
-or the total heatmap:
+```
+CH=100 # or any other id
+awk -v k=$CH 'NR==FNR{a[FNR]=$k} NR>FNR{b[FNR]=$k} END {for(i in a){print a[i],b[i]}}' psd_mean_tfhm.dat psd_std_tfhm.dat > psd_mean_tf_ch${CH}.dat
+```
+
+
+To plot the total heatmap:
 
 ```
 df=0.1
@@ -154,6 +161,8 @@ plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 
 Next steps:
 
-1. Look for differences in time-frequency accross channels
-2. Tidy the julia script
-3. Post-data
+1. Look for differences in time-frequency accross channels:
+	- [✓] Anti-correlation
+	- [?] Phase 
+2. Post-data
+3. Band-pass filter (?)

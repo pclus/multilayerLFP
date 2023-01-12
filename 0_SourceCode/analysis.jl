@@ -89,6 +89,7 @@ function timefreq(id)
     t,chdat = read_channel(id,4e-4,900);    # time series starts at 4e-4
     tfhm = zeros(l,ns);                     # time-freq heatmap
     
+    local S;    # so that S exists outside the loop
     for s in 1:ns
         segdat = chdat[((s-1)*m+1):s*m]
         S  = multispec(segdat, dt=dt, NW=NW, K=K);
@@ -108,7 +109,7 @@ end
 # Authomatic removal of segments including (pre-) movement data
 # notice that this function assumes Δt=10
 #--------------------------------------------------------------
-function movfilter(tfhm)
+function movfilter(t,tfhm)
     mov_pre=readdlm("../1_Raw/mov_pre.dat",' ');
     Δt=10.0;
     mov_indx=Int.(floor.(mov_pre./Δt)*Δt.+5);
@@ -195,7 +196,8 @@ plot(S.f,S.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
 
 # -------------------------------------------------------------
 # Repeat the analysis for all channels and create the heatmaps
-n = 34;
+using Statistics
+n = 384;
 l = 2000;
 
 psd_mean_tfhm = zeros(n,l);
@@ -203,13 +205,12 @@ psd_std_tfhm  = zeros(n,l);
 
 state = Threads.Atomic{Int}(0);
 
-# BUG
 Threads.@threads for id=1:n
     Threads.atomic_add!(state, 1)
     print("--> ",state[]," out of ",n,"\n");
     flush(stdout);
     t,f,tfhm = timefreq(id);
-    f_tfhm = movfilter(tfhm);
+    f_tfhm = movfilter(t,tfhm);
     psd_mean_tfhm[id,:] = mean(f_tfhm,dims=2);  
     psd_std_tfhm[id,:] = std(f_tfhm,dims=2);
 end
@@ -217,5 +218,79 @@ end
 # writedlm("../4_outputs/psd_mean_tfhm.dat",psd_mean_tfhm',' ');
 # writedlm("../4_outputs/psd_std_tfhm.dat",psd_std_tfhm',' ');
 
-heatmap(f,1:n,log.(psd_mean_tfhm))
+heatmap(0.1:0.1:200,1:n,log.(psd_mean_tfhm))
+# -------------------------------------------------------------
+
+# -------------------------------------------------------------
+# Time-frequency analysis: check α and γ variations and correlations
+
+# Single channel:
+id=200;
+t,f,tfhm = timefreq(id);
+
+# # Remove the segments containing movement:
+f_tfhm = movfilter(t,tfhm);
+
+# # Compute statistics for this channel:
+mean_psd=mean(f_tfhm,dims=2);
+std_psd =std(f_tfhm,dims=2);
+plot(f,mean_psd,ribbon=std_psd,c=1,fillalpha=0.25,xlim=(0,70))
+
+# Separate α and γ powers:
+len = size(f_tfhm)[2]
+α = zeros(len,2);
+γ = zeros(len,2);
+αr = 81:201;    # check f[αr]
+γr = 341:461;   # check f[γr]
+# αr = 21:201;    # check f[αr]
+# γr = 301:481;   # check f[γr]
+α[:,1] = mean(f_tfhm[αr,:],dims=1);
+α[:,2] = std(f_tfhm[αr,:],dims=1);
+γ[:,1] = mean(f_tfhm[γr,:],dims=1);
+γ[:,2] = std(f_tfhm[γr,:],dims=1);
+
+cor(α[:,1],γ[:,1]) # Pearson correlation
+
+# plot results
+l1="α ("*string(f[αr][1])*"-"*string(f[αr][end])*" Hz)";
+l2="γ ("*string(f[γr][1])*"-"*string(f[γr][end])*" Hz)";
+plot(1:len,α[:,1],ribbon=α[:,2],fillalpha=0.3,labels=l1)
+p1=plot!(1:len,γ[:,1],ribbon=γ[:,2],fillalpha=0.3, 
+xlabel="Time [s]", ylabel="Power [V²]",labels=l2)
+
+p2 = plot(α[:,1],γ[:,1],xerr=α[:,2],yerr=γ[:,2], key=false,
+ lt=:scatter,xlabel=l1,ylabel=l2,xticks=2e-16:4e-16:2e-15,yticks=5e-17:5e-17:2e-16)
+# plot(log.(α[:,1]),log.(γ[:,1]),lt=:scatter)
+
+# Pearson correlations for all channels
+n = 384;
+l = 2000;
+
+pearson = zeros(n,1);
+
+state = Threads.Atomic{Int}(0);
+
+Threads.@threads for id=1:n
+    Threads.atomic_add!(state, 1)
+    print("--> ",state[]," out of ",n,"\n");
+    flush(stdout);
+    t,f,tfhm = timefreq(id);
+    f_tfhm = movfilter(t,tfhm);    
+    αr = 81:201;    # check f[αr]
+    γr = 341:461;   # check f[γr]
+    # αr = 21:201;    # check f[αr]
+    # γr = 301:481;   # check f[γr]
+    pearson[id] = cor( mean(f_tfhm[αr,:],dims=1)', mean(f_tfhm[γr,:],dims=1)')[1]
+end
+
+
+p3=plot(pearson,1:384, ylabel="Channel",xlabel="R",legend=false,c=3)
+
+l=@layout [a ; [b c]]
+pl=plot(p1,p2,p3,layout=l,size=(800,800))
+savefig(pl,"../3_figures/figure3.pdf")
+# writedlm("../4_outputs/pearson_alpha_gamma_wider.dat",pearson,' ');
+
+
+
 # -------------------------------------------------------------
