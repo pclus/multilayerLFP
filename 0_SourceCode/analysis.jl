@@ -362,6 +362,17 @@ writedlm("../4_outputs/psd_vals.dat",pvals_tfhm',' ');
 
 # heatmap(0.1:0.1:200,1:n,log.(psd_mean_tfhm))
 
+<<<<<<< HEAD
 plot(f,psd_mean_tfhm_pre[id,:],ribbon=psd_std_tfhm_pre[id,:],c=1,fillalpha=0.25)
 plot!(f,psd_mean_tfhm_post[id,:],ribbon=psd_std_tfhm_post[id,:],c=2,fillalpha=0.25)
 plot!(f,(pvals_tfhm[id,:].<=1e-5).*1e-17,ylim=(1e-18,1.2e-15),lt=:scatter)
+=======
+l=@layout [a ; [b c]]
+pl=plot(p1,p2,p3,layout=l,size=(800,800))
+savefig(pl,"../3_figures/figure3.pdf")
+# writedlm("../4_outputs/pearson_alpha_gamma_wider.dat",pearson,' ');
+
+
+
+# -------------------------------------------------------------
+>>>>>>> origin/main
