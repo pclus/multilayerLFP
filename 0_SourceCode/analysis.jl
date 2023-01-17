@@ -217,8 +217,8 @@ Threads.@threads for id=1:n
     psd_std_tfhm[id,:] = std(f_tfhm,dims=2);
 end
 
-# writedlm("../4_outputs/psd_mean_tfhm.dat",psd_mean_tfhm',' ');
-# writedlm("../4_outputs/psd_std_tfhm.dat",psd_std_tfhm',' ');
+ writedlm("../4_outputs/psd_mean_tfhm_"*fl*".dat",psd_mean_tfhm',' ');
+ writedlm("../4_outputs/psd_std_tfhm_"*fl*".dat",psd_std_tfhm',' ');
 
 heatmap(0.1:0.1:200,1:n,log.(psd_mean_tfhm))
 # -------------------------------------------------------------
