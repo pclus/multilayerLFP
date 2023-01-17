@@ -6,9 +6,10 @@ using DelimitedFiles,Multitaper,Plots;
 # -------------------------------------------------------------
 # Reads the "pre" data for a specific channel and time window:
 # -------------------------------------------------------------
-function read_channel(id,t0,tf) # Equivalent to the read_binary.c code
+function read_channel(id,t0,tf,fl) # Equivalent to the read_binary.c code
     id=Int(id);
-    fin=open("../1_Raw/pre.bin","r");
+    # fin=open("../1_Raw/pre.bin","r");
+    fin=open("../1_Raw/"*fl*".bin","r");
     n = 384; 
     m = 2250000;
     dt=1.0/2500.0;
@@ -41,7 +42,7 @@ end
 #--------------------------------------------------------------
 # Spectral heatmap with Multitaper PSD for all channels and a time frame
 #--------------------------------------------------------------
-function heatmapMT(t0,tf)
+function heatmapMT(t0,tf,fl)
     
     rate = 2500.0;
     dt = 1.0/rate;
@@ -56,7 +57,7 @@ function heatmapMT(t0,tf)
 
     # This should be parallelized
     for id in 1:n
-        t,chdat=read_channel(id,t0,tf);
+        t,chdat=read_channel(id,t0,tf,fl);
         S  = multispec(chdat, dt=dt, NW=NW, K=K,jk=true,Ftest=true, a_weight=true);
         hm[id,:] = S.S[1:l] 
         if id%5==0
@@ -73,7 +74,7 @@ end
 #--------------------------------------------------------------
 # Time-frequency heatmap with MT-PSD using segments of 10s
 #--------------------------------------------------------------
-function timefreq(id)
+function timefreq(id,fl)
 
     rate = 2500.0;
     dt = 1.0/rate;
@@ -86,7 +87,7 @@ function timefreq(id)
     NW = 1.0*m*dt/(2.0) ;  
     K = 10;
     
-    t,chdat = read_channel(id,4e-4,900);    # time series starts at 4e-4
+    t,chdat = read_channel(id,4e-4,900,fl);    # time series starts at 4e-4
     tfhm = zeros(l,ns);                     # time-freq heatmap
     
     local S;    # so that S exists outside the loop
@@ -109,8 +110,8 @@ end
 # Authomatic removal of segments including (pre-) movement data
 # notice that this function assumes Δt=10
 #--------------------------------------------------------------
-function movfilter(t,tfhm)
-    mov_pre=readdlm("../1_Raw/mov_pre.dat",' ');
+function movfilter(t,tfhm,fl)
+    mov_pre=readdlm("../1_Raw/mov_"*fl*".dat",' ');
     Δt=10.0;
     mov_indx=Int.(floor.(mov_pre./Δt)*Δt.+5);
     indx = t.∈ [mov_indx];
@@ -131,8 +132,9 @@ end
 t0=200;
 tf=300;
 id=350;
+fl="pre"
 
-t,chdat=read_channel(id,t0,tf);
+t,chdat=read_channel(id,t0,tf,fl);
 
 # Compute the PSD using standard FFT:--------------------------
 # using FFTW
@@ -181,11 +183,11 @@ plot(S.f,S.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
 
 # -------------------------------------------------------------
 # Time-frequency analysis for a single channel:
-# t,f,tfhm = timefreq(150);
+# t,f,tfhm = timefreq(150,fl);
 # # writedlm("../4_outputs/tfhm"*string(id)*".dat",tfhm," ");
 
 # # Remove the segments containing movement:
-# f_tfhm = movfilter(tfhm);
+# f_tfhm = movfilter(tfhm,fl);
 
 # # Compute statistics for this channel:
 # using Statistics
@@ -209,8 +211,8 @@ Threads.@threads for id=1:n
     Threads.atomic_add!(state, 1)
     print("--> ",state[]," out of ",n,"\n");
     flush(stdout);
-    t,f,tfhm = timefreq(id);
-    f_tfhm = movfilter(t,tfhm);
+    t,f,tfhm = timefreq(id,fl);
+    f_tfhm = movfilter(t,tfhm,fl);
     psd_mean_tfhm[id,:] = mean(f_tfhm,dims=2);  
     psd_std_tfhm[id,:] = std(f_tfhm,dims=2);
 end
@@ -226,10 +228,10 @@ heatmap(0.1:0.1:200,1:n,log.(psd_mean_tfhm))
 
 # Single channel:
 id=200;
-t,f,tfhm = timefreq(id);
+t,f,tfhm = timefreq(id,fl);
 
 # # Remove the segments containing movement:
-f_tfhm = movfilter(t,tfhm);
+f_tfhm = movfilter(t,tfhm,fl);
 
 # # Compute statistics for this channel:
 mean_psd=mean(f_tfhm,dims=2);
@@ -274,8 +276,8 @@ Threads.@threads for id=1:n
     Threads.atomic_add!(state, 1)
     print("--> ",state[]," out of ",n,"\n");
     flush(stdout);
-    t,f,tfhm = timefreq(id);
-    f_tfhm = movfilter(t,tfhm);    
+    t,f,tfhm = timefreq(id,fl);
+    f_tfhm = movfilter(t,tfhm,fl);    
     αr = 81:201;    # check f[αr]
     γr = 341:461;   # check f[γr]
     # αr = 21:201;    # check f[αr]
