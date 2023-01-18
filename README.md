@@ -167,5 +167,5 @@ Next steps:
 1. Look for differences in time-frequency accross channels:
 	- [✓] Anti-correlation
 	- [?] Phase 
-2. Post-data [✓]
-3. Band-pass filter (?)
+	- [✓] K-means (may require improvement)
+2. Band-pass filter or freq. bands comparison 

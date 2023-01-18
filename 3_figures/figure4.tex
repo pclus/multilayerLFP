@@ -1,0 +1,154 @@
+\documentclass[ ]{standalone}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+%\usepackage[mathscr]{eucal}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{array}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{float}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage{tikz}
+\usetikzlibrary{tikzmark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{epstopdf}
+\usepackage{latexsym}
+\usepackage{keyval}
+\usepackage{ifthen}
+\usepackage{moreverb}
+%\usepackage{mathastext}
+\usepackage[shell,cleanup,subfolder]{gnuplottex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\definecolor{myBlue}{RGB}{0,84, 159}
+%\usepackage[lmargin=2cm,rmargin=0cm,tmargin=2cm,bmargin=2cm]{geometry}
+\usepackage[pass,paperwidth=8.5in,paperheight=11in]{geometry}
+%\geometry{
+%	paperwidth=30cm,
+%	paperheight=0cm,
+%	margin=2cm
+%}
+
+ \renewcommand{\familydefault}{\sfdefault}
+
+
+\begin{document} 
+%\begin{minipage}{800pt}
+% \hspace{1.5cm}\resizebox{750pt}{!}{\input{pp/diag}}\hspace*{0.550cm}\\[40pt]
+%\end{minipage}
+
+
+\begin{minipage}{12in}
+	\vspace*{0.7cm}
+	\hspace*{1.5cm}
+\begin{gnuplot}[terminal={epslatex},scale=0.9,terminaloptions={color size 12.0,6.0 rounded}]
+        set border lw 2
+        unset grid
+        unset key
+        set loadpath '~/Documents/Data/UPO-tACs/7_results/time-frequency/'
+	set multiplot layout 2,2 columnsfirst title '\Large \bf Subject 9'
+
+	set rmargin 8
+	set lmargin 8
+
+	# ----------------------------------------------------------------
+	df=0.1
+	set ytics 50
+	set xtics 10
+	set cbrange[1e-17:2e-15]
+	set xrange[0:100]
+	set yrange[0:384]
+	set ylabel '\large Channel '
+	set xlabel '\large Freq. [Hz]'
+	set cblabel '\large Power'
+	set logs zcb
+	set pale @RAINBOW
+	# set colorbox user origin graph 1.02,0.0 size screen 0.01, graph 1.0
+	set label 1 at graph 0.92,0.9 center '\large \color{white}\bf Pre' front
+	plot 'psd_mean_tfhm_pre.dat' matrix u (df*$2):1:3 w ima
+	# ----------------------------------------------------------------
+
+	# ----------------------------------------------------------------
+	set label 1 at graph 0.92,0.9 center '\large \color{white}\bf Post' front
+	plot 'psd_mean_tfhm_post.dat' matrix u (df*$2):1:3 w ima
+	unset label 1
+	# ----------------------------------------------------------------
+	
+	# ----------------------------------------------------------------
+	unset logs
+	set cbtics 1e-16
+	set cbrange[-1e-16:1e-16]
+	set cblabel '\large Power difference'
+	set pale @DIVERGING1 negative
+	plot 'psd_mean_tfhm_difference.dat' matrix u (df*$2):1:3 w ima
+	# ----------------------------------------------------------------
+
+	# ----------------------------------------------------------------
+	unset logs
+	set cbtics autofreq
+	set cbrange[1e-4:1.0]
+	set cblabel '\large $t$-test $p$-value'
+	set log zcb
+
+	#OCEAN = "defined (0.0 '#090979', 0.001 '#090979', 0.001 '#00d4ff',  0.099 '#00d4ff', 0.099 '#ffffff', 0.1 '#ffffff' )"
+	OCEAN = "defined ( 0.0 '#090979', 0.25 '#090979', 0.25 '#00d4ff',  0.75 '#00d4ff', 0.75 '#ffffff', 1.0 '#ffffff' )"
+	set pale @OCEAN positive
+	plot 'psd_pvals_uneq.dat' matrix u (df*$2):1:3 w ima
+	# ----------------------------------------------------------------
+\end{gnuplot}
+\vspace*{0.7cm}
+\hspace*{3cm}
+\begin{gnuplot}[terminal={epslatex},scale=0.9,terminaloptions={color size 12.0,3.0 rounded}]
+        set border lw 2
+        unset grid
+        unset key
+	set multiplot layout 1,3
+	set loadpath '~/Documents/Data/UPO-tACs/7_results/time-frequency/channels/'
+
+	set xrange[0:100]
+	set yrange[1e-17:5e-15]
+	set key nobox top right
+	set log y
+
+	#set lt 1 lc rgbcolor '#4daf4a'
+	#set lt 2 lc rgbcolor '#984ea3'
+	set rmargin 5
+	set lmargin 5
+
+	set xlabel '\large Freq. [Hz]'
+	set ylabel '\large Power'
+
+	df=0.1
+	# ----------------------------------------------------------------
+	ch=10
+	plot \
+		"psd_mean_tf_ch".ch."_pre.dat" u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 t '',\
+		"psd_mean_tf_ch".ch."_post.dat" u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 transp lc 2 t '',\
+		"psd_mean_tf_ch".ch."_pre.dat" u ($0*df):1 w l lc 1 t 'Ch. '.ch.' (pre)',\
+		"psd_mean_tf_ch".ch."_post.dat" u ($0*df):1 w l lc 2 t 'Ch. '.ch.' (post)',\
+	# ----------------------------------------------------------------
+	set ylabel ''
+	# ----------------------------------------------------------------
+	ch=100
+	plot \
+		"psd_mean_tf_ch".ch."_pre.dat" u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 t '',\
+		"psd_mean_tf_ch".ch."_post.dat" u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 transp lc 2 t '',\
+		"psd_mean_tf_ch".ch."_pre.dat" u ($0*df):1 w l lc 1 t 'Ch. '.ch.' (pre)',\
+		"psd_mean_tf_ch".ch."_post.dat" u ($0*df):1 w l lc 2 t 'Ch. '.ch.' (post)',\
+	# ----------------------------------------------------------------
+	ch=200
+	plot \
+		"psd_mean_tf_ch".ch."_pre.dat" u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 t '',\
+		"psd_mean_tf_ch".ch."_post.dat" u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 transp lc 2 t '',\
+		"psd_mean_tf_ch".ch."_pre.dat" u ($0*df):1 w l lc 1 t 'Ch. '.ch.' (pre)',\
+		"psd_mean_tf_ch".ch."_post.dat" u ($0*df):1 w l lc 2 t 'Ch. '.ch.' (post)',\
+
+\end{gnuplot}
+
+\end{minipage}
+\end{document}
