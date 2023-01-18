@@ -202,7 +202,7 @@ p1=plot(S.f,S.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
 
 # -------------------------------------------------------------
 # Time-frequency analysis for a single channel:
-fl="pre"
+fl="post"
 id=150
 t,f,tfhm = timefreq(id,fl);
 # writedlm("../4_outputs/ch"*string(id)*"_tfhm.dat",tfhm," ");
@@ -211,7 +211,7 @@ t,f,tfhm = timefreq(id,fl);
 f_idx,f_tfhm = movfilter(t,tfhm,fl);
 
 # Compute statistics for this channel:
-using Statistics
+using Statistics, HypothesisTests
 mean_psd=mean(f_tfhm,dims=2);
 std_psd =std(f_tfhm,dims=2);
 plot(f,mean_psd,ribbon=std_psd,c=1,fillalpha=0.25)
@@ -254,12 +254,17 @@ writedlm("../4_outputs/km_ch"*string(id)*"_pvals.dat",pvals);
 # sil=silhouettes(km,dists)
 # mean(sil)
 #
-# Repeat for all channels [BUG: paralleization finishes with unfinished work, unknown reason]
+# Repeat for all channels [BUG: paralleization finishes with unfinished work, unknown reason,
+# it might be useful to use this:
+# failed=getindex.(findall(iszero,sum(pvals,dims=2)),1)
+# until the bug is not fixed]
+fl="post"
 n = 384;
 l = 2000;
-pvals=zeros(n,l)
+pvals=zeros(n,l);
 state = Threads.Atomic{Int}(0);
-Threads.@threads for id in failed
+Threads.@threads for id in 1:n
+# Threads.@threads for id in failed
     Threads.atomic_add!(state, 1)
     print("--> ",state[]," out of ",n,"\n");
     flush(stdout);

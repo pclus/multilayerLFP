@@ -164,8 +164,16 @@ plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 
 Next steps:
 
-1. Look for differences in time-frequency accross channels:
-	- [✓] Anti-correlation
-	- [?] Phase 
-	- [✓] K-means (may require improvement)
+1. Look for differences in time-frequency accross channels: Kmeans might be missleading (cloud points), should use different tools:
+	- [] Moving window time-freq heatmap to visualize better the differences.
+	- [] Clusting algorithm with authomatic cluster detection.
+	- ...
 2. Band-pass filter or freq. bands comparison 
+	- [] Repeat pre/post analysis with single-long chunk of time-series.
+3. Ask UPO:
+	- [] Are the movement artifacts because of the movement, or the change in "brain state"? Ask UPO
+	- [] What happens with the 50Hz and 60 Hz artifacts?
+4. Other:
+	- [] P-values heatmaps, use 4 colors (3 + white), one for each decade.
+	- [] T-test assumes normalitiy, should check there are no long tails at least.
+
