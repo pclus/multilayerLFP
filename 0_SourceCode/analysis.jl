@@ -202,7 +202,7 @@ p1=plot(S.f,S.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
 
 # -------------------------------------------------------------
 # Time-frequency analysis for a single channel:
-fl="post"
+fl="pre"
 id=150
 t,f,tfhm = timefreq(id,fl);
 # writedlm("../4_outputs/ch"*string(id)*"_tfhm.dat",tfhm," ");
@@ -215,6 +215,18 @@ using Statistics, HypothesisTests
 mean_psd=mean(f_tfhm,dims=2);
 std_psd =std(f_tfhm,dims=2);
 plot(f,mean_psd,ribbon=std_psd,c=1,fillalpha=0.25)
+
+# Classify elements using DSB ------------------------------------------------
+using Clustering
+points = randn(2, 1000);
+points[:,1:500] = randn(2,500); points[:,501:1000]=randn(2,500)+3.0*ones(2,500)
+# DBSCAN clustering, clusters with less than 20 points will be discarded:
+clusters = dbscan(points, 1.0, min_neighbors = 100   , min_cluster_size = 20)
+
+plot(points[1,:],points[2,:],lt=:scatter)
+plot!(points[1,clusters[1].core_indices],points[2,clusters[1].core_indices],lt=:scatter)
+plot!(points[1,clusters[2].core_indices],points[2,clusters[2].core_indices],lt=:scatter)
+# -----------------------------------------------------------------------------
 
 # Classify segments using kmeans
 using Clustering
