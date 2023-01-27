@@ -1,17 +1,23 @@
-# Initial processing of the files:
+# Analysis of LFP from UPO-tACS Dataset
+
+## Index
 <!-- vim-markdown-toc GFM -->
 
-* [LFP Data:](#lfp-data)
-	* [Other options:](#other-options)
-* [Movement data:](#movement-data)
-* [Data Overview:](#data-overview)
+* [Processing of the `.mat` files](#processing-of-the-mat-files)
+	* [Local Field Potential files](#local-field-potential-files)
+	* [Reading binary files with C](#reading-binary-files-with-c)
+	* [Movement data](#movement-data)
+* [Data Overview](#data-overview)
 * [Frequency analysis:](#frequency-analysis)
 
 <!-- vim-markdown-toc -->
 
-## LFP Data:
 
-The "pre" and "post" data in the Matlab file have been transcribed to a binary file for convenience.
+## Processing of the `.mat` files
+
+### Local Field Potential files
+
+The "pre" and "post" data in the Matlab file have been transcribed to binary files for convenience.
 The "pre" data has been stored in `1_Raw/pre.bin`, and the "post" data has been stored in `1_Raw/pre.bin`.
 These files have been created by running this code in Matlab:
 
@@ -19,26 +25,32 @@ These files have been created by running this code in Matlab:
 mf=matfile('1_Raw/Suj9.mat');
 
 pre=mf.Suj9(1,1);
-fid=fopen("pre.bin","w"); fwrite(fid,pre{1}(384:-1:1,:),'double'); fclose(fid)
+fid=fopen("pre.bin","w"); fwrite(fid,pre{1}(384:-1:1,:)','double'); fclose(fid)
 
 post=mf.Suj9(2,1);
-fid=fopen("post.bin","w"); fwrite(fid,post{1}(384:-1:1,:),'double'); fclose(fid)
+fid=fopen("post.bin","w"); fwrite(fid,post{1}(384:-1:1,:)','double'); fclose(fid)
 ```
 
-Notice that, in the Matlab matrices, the order of the channels has been inverted (i.e., `Suj{1}(1,:)` contains the data for channel 384).
+Notice that, in the original Matlab matrices, the order of the channels has been inverted (i.e., `Suj{1}(1,:)` contains the data for channel 384).
 In the binary files we revert back so that each channel ID matches its row in the file.
-To read these binary files notice that the matrix dimensions of each, `pre` and `post`, are 384x2250000
-and that Matlab stores in column major.
+Additionally, we transpose the matrix so that each column is the data from one channel.
+This is very convinient for later reading of the files, because Matlab stores matrices in column major.
 
-The function `readbin` can be used to read such binary files.
-Source code is stored in the `Tools`directory.
+### Reading binary files with C
+
+To read these binary files notice that the matrix dimensions of each, `pre` and `post`, are 2250000x384.
+The Julia function `read_channel()` in `analysis.jl` takes care of this (see later).
+However we include an additional C function that can be used directly
+
+The function `readbin` can be used to read such binary files
+Source code is stored in the `0_SourceCode`directory.
 The usage of the function is 
 
 ```
 ./readbin <infile> <outfile> <id> <t0> <tf>`
 ```
 and outputs in `<outfile>` the time series of channel `<id>` (from 1 to 384)
-from time `<t0>` to `<tf>` (from 0 to 900).
+from time `<t0>` to `<tf>` (from 0.0004 to 900).
 The data must be stored in the binary `<infile>`.
 For example:
 
@@ -48,64 +60,20 @@ For example:
 
 stores the time series of channel 350 from 200s to 300s to the t2.dat file.
 
-### Other options:
 
-If you do not want to use the binary file you can work directly in Matlab,
-outputting single channels:
+### Movement data
 
-```
-mf=matfile('1_Raw/Suj9.mat');
-pre=mf.Suj9(1,1);
-
-i=1;
-dt=1.0/2500.0;
-l=numel(pre{1}(i,:));
-data=zeros(l,2);
-data(:,1)=(1:l).*dt;
-data(:,2)=pre{1}(i,:);
-dlmwrite('pre1.dat',data,'delimiter',' ','precision','%.8g');
-
-```
-Alternatively (not recommended), one can simply use:
-```
-mf=matfile('1_Raw/Suj9.mat');
-pre=mf.Suj9(1,1);
-dlmwrite('pre.dat',pre{1}(1,:),'delimiter','\n','precision','%.8g');
-```
-and only one column is outputted. Remember then to use double format to output
-with awk if further processing is done:
-```
-awk '{printf "%.16g %.16g\n",NR/2500.0,$1}' pre.dat > ppre1.dat
-```
-
-These short scripts output the data from channel `i` to a `.dat` file.
-The true time series can then be plot using gnuplot:
-
-```
-plot 'pre.dat' u 1:2 
-```
-
-or `u ($0/2500.0):1`, depending on your format,
-since time step is dt=1/2500.0).
-The time series can be manually cut using:
-
-```
-awk '$1>=200.0 && $1<=300{print $0}' pre1.dat > cut_pre1.dat
-```
-
-## Movement data:
-
-The movement can be converted to dat file in octave:
+The movement can be converted to `.dat` file in octave:
 ```
 load('mov.mat');
 dlmwrite('mov_pre.dat',mov{1},' ')
 dlmwrite('mov_dur.dat',mov{2},' ')
 dlmwrite('mov_post.dat',mov{3},' ')
 ```
-This is done only once, and the results are stored in the "1_Raw" folder.
+This is done only once, and the results are stored in the `1_Raw` folder.
 
 
-## Data Overview:
+## Data Overview
 
 
 If `pre1.dat` contains all the 900s of a channel, then in gnuplot one can use:

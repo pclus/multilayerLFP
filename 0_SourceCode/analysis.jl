@@ -19,7 +19,7 @@ function read_channel(id,t0,tf,fl) # Equivalent to the read_binary.c code
     for i in 1:id
         read!(fin,data)
     end
-    fclose(fin);
+    close(fin);
 
     m0=Int(ceil(t0/dt));
     mf=Int(floor(tf/dt));
@@ -219,9 +219,9 @@ end
 # --------------------------------------------------------------
 
 # Load time series for a specific channel from second 200 to 300:
-t0=200;
-tf=210;
-id=5;
+t0=100;
+tf=200;
+id=123;
 fl="pre"
 
 t,chdat=read_channel(id,t0,tf,fl);
