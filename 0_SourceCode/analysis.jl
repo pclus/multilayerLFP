@@ -9,34 +9,27 @@ using DelimitedFiles,Multitaper,Plots;
 # -------------------------------------------------------------
 function read_channel(id,t0,tf,fl) # Equivalent to the read_binary.c code
     id=Int(id);
-    # fin=open("../1_Raw/pre.bin","r");
-    # fin=open("../1_Raw/"*fl*".bin","r");
     n = 384; 
     m = 2250000;
     dt=1.0/2500.0;
 
+    
+    data = zeros(m);
+    fin=open("../1_Raw/"*fl*".bin","r");
+    for i in 1:id
+        read!(fin,data)
+    end
+    fclose(fin);
+
     m0=Int(ceil(t0/dt));
     mf=Int(floor(tf/dt));
+    dm=mf-m0+1
 
-    data=zeros(n);
-
-    for i in 1:(m0-1)
-        read!(fin,data);
-    end
-    dm=mf-m0+1;
-    channel=zeros(dm);
-    for i in 1:dm
-        if !eof(fin)
-            read!(fin,data);
-            channel[i]=data[id];
-        else
-            print("End-of-file at ",i," out of ",dm);
-        end
-    end
-    close(fin);
-
+    channel=data[m0:mf]
     t=collect(dt*(m0:mf));
-    writedlm("../temp.dat",[t channel]," ",);
+
+    # writedlm("../temp.dat",[t channel]," ");
+    
     return t, channel;
 end
 
@@ -333,84 +326,6 @@ mean_psd=mean(f_tfhm,dims=2);
 std_psd =std(f_tfhm,dims=2);
 plot(f,mean_psd,ribbon=std_psd,c=1,fillalpha=0.25)
 
-# Classify elements using DSB ------------------------------------------------
-using Clustering
-points = randn(2, 1000);
-points[:,1:500] = randn(2,500); points[:,501:1000]=randn(2,500)+3.0*ones(2,500)
-# DBSCAN clustering, clusters with less than 20 points will be discarded:
-clusters = dbscan(points, 1.0, min_neighbors = 100   , min_cluster_size = 20)
-
-plot(points[1,:],points[2,:],lt=:scatter)
-plot!(points[1,clusters[1].core_indices],points[2,clusters[1].core_indices],lt=:scatter)
-plot!(points[1,clusters[2].core_indices],points[2,clusters[2].core_indices],lt=:scatter)
-# -----------------------------------------------------------------------------
-
-# Classify segments using kmeans
-using Clustering
-km = kmeans(f_tfhm,2,tol=1e-50)
-ikm = assignments(km)
-ckm = km.centers;
-plot(f_tfhm[:,:],c=ikm[:]',lw=0.5,legend=false,ylim=(5e-18,5e-15),alpha=0.2)
-plot!(ckm[:,:],c=[1 2],lw=3)
-
-# T-test between the two groups
-m=size(f_tfhm,1);
-pvals=zeros(m)
-for j in 1:m
-    pvals[j]=pvalue( UnequalVarianceTTest(f_tfhm[j,findall(ikm.==1)] , f_tfhm[j,findall(ikm.==2)]) );
-end
-plot(pvals.<1e-3,lt=:bar)
-
-t,chdat=read_channel(id,dt,900,fl);
-writedlm("../4_outputs/ch"*string(id)*".dat",[t chdat]," ");
-writedlm("../4_outputs/ch"*string(id)*"_tfhm.dat",tfhm," ");
-writedlm("../4_outputs/ch"*string(id)*"_tfhm.dat",tfhm," ");
-writedlm("../4_outputs/km_ch"*string(id)*"_tfhm_k1.dat",f_tfhm[:,findall(ikm.==1)]);
-writedlm("../4_outputs/km_ch"*string(id)*"_tfhm_k2.dat",f_tfhm[:,findall(ikm.==2)]);
-writedlm("../4_outputs/km_ch"*string(id)*"_idx.dat",[t[f_idx] ikm]);
-writedlm("../4_outputs/km_ch"*string(id)*"_centers.dat",ckm);
-writedlm("../4_outputs/km_ch"*string(id)*"_pvals.dat",pvals);
-
-# Silhouette validation of k-means
-# using LinearAlgebra
-# s=size(f_tfhm,2)
-# dists=zeros(s,s);
-# for i in 1:s
-#     for j in 1:s
-#         dists[i,j]=norm(f_tfhm[:,j]-f_tfhm[:,i]);
-#     end
-# end
-# sil=silhouettes(km,dists)
-# mean(sil)
-#
-# Repeat for all channels [BUG: paralleization finishes with unfinished work, unknown reason,
-# it might be useful to use this:
-# failed=getindex.(findall(iszero,sum(pvals,dims=2)),1)
-# until the bug is not fixed]
-fl="post"
-n = 384;
-l = 2000;
-pvals=zeros(n,l);
-state = Threads.Atomic{Int}(0);
-Threads.@threads for id in 1:n
-# Threads.@threads for id in failed
-    Threads.atomic_add!(state, 1)
-    print("--> ",state[]," out of ",n,"\n");
-    flush(stdout);
-
-    t,f,tfhm = timefreq(id,fl);
-    f_idx,f_tfhm = movfilter(t,tfhm,fl);
-
-    km = kmeans(f_tfhm,2,tol=1e-50)
-    ikm = assignments(km)
-
-    for j in 1:l
-        pvals[id,j]=pvalue( UnequalVarianceTTest(f_tfhm[j,findall(ikm.==1)] , f_tfhm[j,findall(ikm.==2)]) );
-    end
-end
-
-writedlm("../4_outputs/km_pvals.dat",pvals," ");
-#
 # -------------------------------------------------------------
 
 # -------------------------------------------------------------
@@ -439,77 +354,6 @@ writedlm("../4_outputs/km_pvals.dat",pvals," ");
 #
 #heatmap(0.1:0.1:200,1:n,log.(psd_mean_tfhm))
 # -------------------------------------------------------------
-
-# -------------------------------------------------------------
-# Time-frequency analysis: check α and γ variations and correlations
-
-# # Single channel:
-# id=200;
-# t,f,tfhm = timefreq(id,fl);
-
-# # # Remove the segments containing movement:
-# idx,f_tfhm = movfilter(t,tfhm,fl);
-
-# # # Compute statistics for this channel:
-# mean_psd=mean(f_tfhm,dims=2);
-# std_psd =std(f_tfhm,dims=2);
-# plot(f,mean_psd,ribbon=std_psd,c=1,fillalpha=0.25,xlim=(0,70))
-
-# # Separate α and γ powers:
-# len = size(f_tfhm)[2]
-# α = zeros(len,2);
-# γ = zeros(len,2);
-# αr = 81:201;    # check f[αr]
-# γr = 341:461;   # check f[γr]
-# # αr = 21:201;    # check f[αr]
-# # γr = 301:481;   # check f[γr]
-# α[:,1] = mean(f_tfhm[αr,:],dims=1);
-# α[:,2] = std(f_tfhm[αr,:],dims=1);
-# γ[:,1] = mean(f_tfhm[γr,:],dims=1);
-# γ[:,2] = std(f_tfhm[γr,:],dims=1);
-
-# cor(α[:,1],γ[:,1]) # Pearson correlation
-
-# # plot results
-# l1="α ("*string(f[αr][1])*"-"*string(f[αr][end])*" Hz)";
-# l2="γ ("*string(f[γr][1])*"-"*string(f[γr][end])*" Hz)";
-# plot(1:len,α[:,1],ribbon=α[:,2],fillalpha=0.3,labels=l1)
-# p1=plot!(1:len,γ[:,1],ribbon=γ[:,2],fillalpha=0.3, 
-# xlabel="Time [s]", ylabel="Power [V²]",labels=l2)
-
-# p2 = plot(α[:,1],γ[:,1],xerr=α[:,2],yerr=γ[:,2], key=false,
-#  lt=:scatter,xlabel=l1,ylabel=l2,xticks=2e-16:4e-16:2e-15,yticks=5e-17:5e-17:2e-16)
-# # plot(log.(α[:,1]),log.(γ[:,1]),lt=:scatter)
-
-# # Pearson correlations for all channels
-# n = 384;
-# l = 2000;
-
-# pearson = zeros(n,1);
-
-# state = Threads.Atomic{Int}(0);
-
-# Threads.@threads for id in 1:n
-#     Threads.atomic_add!(state, 1)
-#     print("--> ",state[]," out of ",n,"\n");
-#     flush(stdout);
-#     t,f,tfhm = timefreq(id,fl);
-#     idx,f_tfhm = movfilter(t,tfhm,fl);    
-#     αr = 81:201;    # check f[αr]
-#     γr = 341:461;   # check f[γr]
-#     # αr = 21:201;    # check f[αr]
-#     # γr = 301:481;   # check f[γr]
-#     pearson[id] = cor( mean(f_tfhm[αr,:],dims=1)', mean(f_tfhm[γr,:],dims=1)')[1]
-# end
-
-
-# p3=plot(pearson,1:384, ylabel="Channel",xlabel="R",legend=false,c=3)
-
-# l=@layout [a ; [b c]]
-# pl=plot(p1,p2,p3,layout=l,size=(800,800))
-# savefig(pl,"../3_figures/figure3.pdf")
-# # writedlm("../4_outputs/pearson_alpha_gamma_wider.dat",pearson,' ');
-
 
 
 # -------------------------------------------------------------

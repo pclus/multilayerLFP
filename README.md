@@ -24,6 +24,7 @@ fid=fopen("pre.bin","w"); fwrite(fid,pre{1}(384:-1:1,:),'double'); fclose(fid)
 post=mf.Suj9(2,1);
 fid=fopen("post.bin","w"); fwrite(fid,post{1}(384:-1:1,:),'double'); fclose(fid)
 ```
+
 Notice that, in the Matlab matrices, the order of the channels has been inverted (i.e., `Suj{1}(1,:)` contains the data for channel 384).
 In the binary files we revert back so that each channel ID matches its row in the file.
 To read these binary files notice that the matrix dimensions of each, `pre` and `post`, are 384x2250000
