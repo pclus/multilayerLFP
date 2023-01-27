@@ -36,20 +36,58 @@ end
 # -------------------------------------------------------------
 # Creates the CSD binary file by computing the Laplacian [UNDER DEVELOPMENT]
 # -------------------------------------------------------------
-function csd(fl)
+function bipolar(fl)
     rate = 2500.0;
     dt = 1/rate;
     t0 = dt;
     tf = 900.0; 
-    n = 384
-    read_channel(id,t0,tf,fl)
+    n = 384;
 
-    column = 1; #odd
-    column = 2; #even
-    for i in 1:n
+    fout = open("../1_Raw/bipolar_"*fl*".bin","a");
+
+    t,ch_1 = read_channel(1,t0,tf,fl)
+    t,ch_2 = read_channel(2,t0,tf,fl)
+    t,ch_3 = read_channel(3,t0,tf,fl)
+    t,ch_4 = read_channel(4,t0,tf,fl)
+
+    t,ch_5 = read_channel(5,t0,tf,fl)
+    t,ch_6 = read_channel(6,t0,tf,fl)
+    t,ch_7 = read_channel(7,t0,tf,fl)
+    t,ch_8 = read_channel(8,t0,tf,fl)
+
+    csd_
+
+
+    inv_dy=1/20.0; # 1/μm
+
+    for id in 9:4:n
+        t,next_a = read_channel(id  ,t0,tf,fl)
+        t,next_b = read_channel(id+1,t0,tf,fl)
+        t,next_c = read_channel(id+2,t0,tf,fl)
+        t,next_d = read_channel(id+3,t0,tf,fl)
+
+        bip_a = 0.5*inv_dy*( prev_a - next_a);
+        bip_b = 0.5*inv_dy*( prev_b - next_b);
+        bip_c = 0.5*inv_dy*( prev_c - next_c);
+        bip_d = 0.5*inv_dy*( prev_d - next_d);
+
+        prev_a=curr_a;
+        prev_b=curr_b;
+        prev_c=curr_c;
+        prev_d=curr_d;
+
+        curr_a=next_a;
+        curr_b=next_b;
+        curr_c=next_c;
+        curr_d=next_d;
+
+        write(fout,bip_a);
+        write(fout,bip_b);
+        write(fout,bip_c);
+        write(fout,bip_d);
 
     end
-
+    close(fout)
 
 end
 

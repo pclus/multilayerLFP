@@ -125,7 +125,7 @@
 
 	df=0.1
 	# ----------------------------------------------------------------
-	ch=10
+	ch=375
 	plot \
 		"psd_mean_tf_ch".ch."_pre.dat" u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 t '',\
 		"psd_mean_tf_ch".ch."_post.dat" u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 transp lc 2 t '',\
@@ -134,14 +134,14 @@
 	# ----------------------------------------------------------------
 	set ylabel ''
 	# ----------------------------------------------------------------
-	ch=100
+	ch=285
 	plot \
 		"psd_mean_tf_ch".ch."_pre.dat" u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 t '',\
 		"psd_mean_tf_ch".ch."_post.dat" u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 transp lc 2 t '',\
 		"psd_mean_tf_ch".ch."_pre.dat" u ($0*df):1 w l lc 1 t 'Ch. '.ch.' (pre)',\
 		"psd_mean_tf_ch".ch."_post.dat" u ($0*df):1 w l lc 2 t 'Ch. '.ch.' (post)',\
 	# ----------------------------------------------------------------
-	ch=200
+	ch=185
 	plot \
 		"psd_mean_tf_ch".ch."_pre.dat" u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 t '',\
 		"psd_mean_tf_ch".ch."_post.dat" u ($0*df):($1-$2):($1+$2) w filledcu fs solid 0.5 transp lc 2 t '',\
