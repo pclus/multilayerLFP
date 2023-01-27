@@ -1,19 +1,31 @@
 # Initial processing of the files:
+<!-- vim-markdown-toc GFM -->
+
+* [LFP Data:](#lfp-data)
+	* [Other options:](#other-options)
+* [Movement data:](#movement-data)
+* [Data Overview:](#data-overview)
+* [Frequency analysis:](#frequency-analysis)
+
+<!-- vim-markdown-toc -->
 
 ## LFP Data:
 
-The "pre" and "post" data in the matlab file have been transcribed to a binary files for convenience. The "pre" data has been stored in `1_Raw/pre.bin`, and the "post" data has been stored in `1_Raw/pre.bin`.
+The "pre" and "post" data in the Matlab file have been transcribed to a binary file for convenience.
+The "pre" data has been stored in `1_Raw/pre.bin`, and the "post" data has been stored in `1_Raw/pre.bin`.
 These files have been created by running this code in Matlab:
 
 ```
 mf=matfile('1_Raw/Suj9.mat');
 
 pre=mf.Suj9(1,1);
-fid=fopen("pre.bin","w"); fwrite(fid,pre{1}(:,:),'double'); fclose(fid)
+fid=fopen("pre.bin","w"); fwrite(fid,pre{1}(384:-1:1,:),'double'); fclose(fid)
 
 post=mf.Suj9(2,1);
-fid=fopen("post.bin","w"); fwrite(fid,post{1}(:,:),'double'); fclose(fid)
+fid=fopen("post.bin","w"); fwrite(fid,post{1}(384:-1:1,:),'double'); fclose(fid)
 ```
+Notice that, in the Matlab matrices, the order of the channels has been inverted (i.e., `Suj{1}(1,:)` contains the data for channel 384).
+In the binary files we revert back so that each channel ID matches its row in the file.
 To read these binary files notice that the matrix dimensions of each, `pre` and `post`, are 384x2250000
 and that Matlab stores in column major.
 

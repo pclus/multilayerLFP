@@ -5,12 +5,12 @@ using DelimitedFiles,Multitaper,Plots;
 # -------------------------------------------------------------
 # FUNCTIONS:
 # -------------------------------------------------------------
-# Reads the "pre" data for a specific channel and time window:
+# Reads the binary data for a specific channel, time window, and file
 # -------------------------------------------------------------
 function read_channel(id,t0,tf,fl) # Equivalent to the read_binary.c code
     id=Int(id);
     # fin=open("../1_Raw/pre.bin","r");
-    fin=open("../1_Raw/"*fl*".bin","r");
+    # fin=open("../1_Raw/"*fl*".bin","r");
     n = 384; 
     m = 2250000;
     dt=1.0/2500.0;
@@ -40,6 +40,83 @@ function read_channel(id,t0,tf,fl) # Equivalent to the read_binary.c code
     return t, channel;
 end
 
+# -------------------------------------------------------------
+# Creates the CSD binary file by computing the Laplacian [UNDER DEVELOPMENT]
+# -------------------------------------------------------------
+function csd(fl)
+    rate = 2500.0;
+    dt = 1/rate;
+    t0 = dt;
+    tf = 900.0; 
+    n = 384
+    read_channel(id,t0,tf,fl)
+
+    column = 1; #odd
+    column = 2; #even
+    for i in 1:n
+
+    end
+
+
+end
+
+# -------------------------------------------------------------
+# Creates the bipolar potential binary file by computing a 
+# 2-sided derivative for each of the 4 columns of Neuropixel
+# -------------------------------------------------------------
+function bipolar(fl)
+    rate = 2500.0;
+    dt = 1/rate;
+    t0 = dt;
+    tf = 900.0; 
+    n = 384;
+
+    fout = open("../1_Raw/bipolar_"*fl*".bin","a");
+
+    t,prev_a = read_channel(1,t0,tf,fl)
+    t,prev_b = read_channel(2,t0,tf,fl)
+    t,prev_c = read_channel(3,t0,tf,fl)
+    t,prev_d = read_channel(4,t0,tf,fl)
+
+    t,curr_a = read_channel(5,t0,tf,fl)
+    t,curr_b = read_channel(6,t0,tf,fl)
+    t,curr_c = read_channel(7,t0,tf,fl)
+    t,curr_d = read_channel(8,t0,tf,fl)
+
+    inv_dy=1/20.0; # 1/μm
+
+    for id in 9:4:n
+        t,next_a = read_channel(id  ,t0,tf,fl)
+        t,next_b = read_channel(id+1,t0,tf,fl)
+        t,next_c = read_channel(id+2,t0,tf,fl)
+        t,next_d = read_channel(id+3,t0,tf,fl)
+
+        bip_a = 0.5*inv_dy*( prev_a - next_a);
+        bip_b = 0.5*inv_dy*( prev_b - next_b);
+        bip_c = 0.5*inv_dy*( prev_c - next_c);
+        bip_d = 0.5*inv_dy*( prev_d - next_d);
+
+        prev_a=curr_a;
+        prev_b=curr_b;
+        prev_c=curr_c;
+        prev_d=curr_d;
+
+        curr_a=next_a;
+        curr_b=next_b;
+        curr_c=next_c;
+        curr_d=next_d;
+
+        write(fout,bip_a);
+        write(fout,bip_b);
+        write(fout,bip_c);
+        write(fout,bip_d);
+
+    end
+    close(fout)
+
+end
+
+
 #--------------------------------------------------------------
 # Spectral heatmap with Multitaper PSD for all channels and a time frame
 #--------------------------------------------------------------
@@ -56,8 +133,8 @@ function heatmapMT(t0,tf,fl)
     l = 30002; # WARNING: This assumes relevant frequencies below entry l of the spectra
     hm = zeros(n,l);
 
-    # This should be parallelized
-    for id in 1:n
+    local S;  
+    Threads.@threads for id in 1:n
         t,chdat=read_channel(id,t0,tf,fl);
         S  = multispec(chdat, dt=dt, NW=NW, K=K,jk=true,Ftest=true, a_weight=true);
         hm[id,:] = S.S[1:l] 
@@ -87,10 +164,12 @@ function timefreq(id,fl)
     l = 2000;       # but...up to l is enough to get the relevant freqs
     NW = 1.0*m*dt/(2.0) ;  
     K = 8;
-    
     t,chdat = read_channel(id,4e-4,900,fl);    # time series starts at 4e-4
-    tfhm = zeros(l,ns);                     # time-freq heatmap
-    
+
+    #--------------------------------------------------------------
+    # Non-overlapping windows <default>
+    #--------------------------------------------------------------
+    tfhm = zeros(l,ns);   # time-freq heatmap
     local S;    # so that S exists outside the loop
     for s in 1:ns
         segdat = chdat[((s-1)*m+1):s*m]
@@ -101,6 +180,23 @@ function timefreq(id,fl)
             flush(stdout);
         end
     end
+    #--------------------------------------------------------------
+    # Overlapping windows <just for display>
+    #--------------------------------------------------------------
+    # tfhm = zeros(l,900);   
+    # sec = 2250000/rate# for every second
+    # local S;    # so that S exists outside the loop
+    # for s in 5:895
+    #     segdat = chdat[Int(1+(s-5)*rate):Int((s+5)*rate)]
+    #     S  = multispec(segdat, dt=dt, NW=NW, K=K);
+    #     tfhm[:,s] = S.S[1:l];
+    #     if s%5==0
+    #         print(s,"\r");
+    #         flush(stdout);
+    #     end
+    # end
+    #--------------------------------------------------------------
+    
     freqs = collect(S.f[1:l]);
     times = collect(5:10:900);
 
@@ -131,11 +227,32 @@ end
 
 # Load time series for a specific channel from second 200 to 300:
 t0=200;
-tf=300;
-id=150;
-fl="post"
+tf=210;
+id=5;
+fl="pre"
 
 t,chdat=read_channel(id,t0,tf,fl);
+
+# Comapring bipolar and raw data:
+#--------------------------------------------------------------
+# Load time series for a specific channel from second 200 to 300:
+t0=1/2500.0;
+tf=300;
+
+fl="pre"
+t,ch1=read_channel(1,t0,tf,fl);
+t,ch5=read_channel(5,t0,tf,fl);
+t,ch9=read_channel(9,t0,tf,fl);
+
+fl="bipolar_pre"
+t,bi5=read_channel(1,t0,tf,fl);
+
+
+plot(ch1[1:1000])
+plot!(ch5[1:1000])
+# plot!(ch9[1:1000])
+plot!(data[1:1000])
+plot!((ch1[1:1000]-ch9[1:1000]))
 
 
 # Compute PSD using Multitaper PSD ----------------------------
@@ -143,10 +260,10 @@ rate=2500.0;
 dt=1.0/rate;
 
 NW = 1.0*length(chdat)*dt/(2.0) ;  # real bandwith is ω*dt/2.0, and NW = N*ω*dt/2.0
-K  = 40;    # number of tappers (should be similar slightly less than 2*NW)
+K  = 10;    # number of tappers (should be similar slightly less than 2*NW)
 @time S  = multispec(chdat, dt=dt, NW=NW, K=K,jk=true,Ftest=true, a_weight=false);
 
-plot(S,xlim=(0,200),ylim=(1e-18,5e-15))
+plot(S,xlim=(0,2000),ylim=(1e-18,5e-15))
 
 
 p1=plot(S.f,S.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
@@ -196,7 +313,7 @@ p1=plot(S.f,S.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
 
 # -------------------------------------------------------------
 # Create a heatmap of the pre data from 200s to 300s using Multitaper:
-# a,b=heatmapMT(200.0,300.0)
+a,b=heatmapMT(200.0,300.0,fl)
 # writedlm("../4_outputs/psd_mthm.dat",b," ");
 # -------------------------------------------------------------
 
@@ -205,7 +322,7 @@ p1=plot(S.f,S.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
 fl="pre"
 id=150
 t,f,tfhm = timefreq(id,fl);
-# writedlm("../4_outputs/ch"*string(id)*"_tfhm.dat",tfhm," ");
+writedlm("../4_outputs/ch"*string(id)*"_tfhm_HD.dat",tfhm," ");
 
 # Remove the segments containing movement:
 f_idx,f_tfhm = movfilter(t,tfhm,fl);
