@@ -8,6 +8,7 @@
 	* [Reading binary files with C](#reading-binary-files-with-c)
 	* [Movement data](#movement-data)
 * [Data Overview](#data-overview)
+* [Bipolar and CSD](#bipolar-and-csd)
 * [Frequency analysis:](#frequency-analysis)
 
 <!-- vim-markdown-toc -->
@@ -81,6 +82,36 @@ If `pre1.dat` contains all the 900s of a channel, then in gnuplot one can use:
 ```
 plot 'mov_pre.dat' u 1:(-1e-5):(0):(2e-5) w vectors nohead lc 'gray' , 'pre1.dat' ev 10 w l lc 1 lw 1
 ```
+
+## Bipolar and CSD
+
+The Julia code `analysis.jl` contains the functions `bipolar()` and `csd()`
+that read the original LFP data and compute, respectively, the bipolar potential
+differences and the CSD:
+
+- `bipolar()` computes the first derivative using the columns of the prove. 
+Therefore, in the `bipolar_<flag>.bin` binary files the 4 first and the 4 last channels
+are missing. Hence `read_channel(1,t0,tf,"bipolar_pre")` reads the bipolar data for channel 5.
+
+- `csd()` computes the CSD using Poisson's equation for the inner columns of the prove.
+Therefore, in `csd_<flag>.bin` only 384/2-2=190 channels are computed (the two inner columns minus
+the first and last row, i.e., channels 1 and 384). The relation of `read_channel` and the actual
+channel therefore is:
+
+| `id` | `channel`  |
+|:-:   |:-:         |
+|  1   |    4       |
+|  2   |    5       |
+|  3   |    8       |
+|  4   |    9       |
+|  ... |            |
+|  i   | 2i+1+i%2   |
+|  ... |            |
+|  188 |   377      |
+|  189 |   380      |
+|  190 |   381      |
+
+
 ## Frequency analysis:
 
 Use script `freq_image.sh` (Tools folder).

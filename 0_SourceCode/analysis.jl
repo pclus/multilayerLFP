@@ -43,66 +43,7 @@ function bipolar(fl)
     tf = 900.0; 
     n = 384;
 
-    fout = open("../1_Raw/bipolar_"*fl*".bin","a");
-
-    t,ch_1 = read_channel(1,t0,tf,fl)
-    t,ch_2 = read_channel(2,t0,tf,fl)
-    t,ch_3 = read_channel(3,t0,tf,fl)
-    t,ch_4 = read_channel(4,t0,tf,fl)
-
-    t,ch_5 = read_channel(5,t0,tf,fl)
-    t,ch_6 = read_channel(6,t0,tf,fl)
-    t,ch_7 = read_channel(7,t0,tf,fl)
-    t,ch_8 = read_channel(8,t0,tf,fl)
-
-    csd_
-
-
-    inv_dy=1/20.0; # 1/μm
-
-    for id in 9:4:n
-        t,next_a = read_channel(id  ,t0,tf,fl)
-        t,next_b = read_channel(id+1,t0,tf,fl)
-        t,next_c = read_channel(id+2,t0,tf,fl)
-        t,next_d = read_channel(id+3,t0,tf,fl)
-
-        bip_a = 0.5*inv_dy*( prev_a - next_a);
-        bip_b = 0.5*inv_dy*( prev_b - next_b);
-        bip_c = 0.5*inv_dy*( prev_c - next_c);
-        bip_d = 0.5*inv_dy*( prev_d - next_d);
-
-        prev_a=curr_a;
-        prev_b=curr_b;
-        prev_c=curr_c;
-        prev_d=curr_d;
-
-        curr_a=next_a;
-        curr_b=next_b;
-        curr_c=next_c;
-        curr_d=next_d;
-
-        write(fout,bip_a);
-        write(fout,bip_b);
-        write(fout,bip_c);
-        write(fout,bip_d);
-
-    end
-    close(fout)
-
-end
-
-# -------------------------------------------------------------
-# Creates the bipolar potential binary file by computing a 
-# 2-sided derivative for each of the 4 columns of Neuropixel
-# -------------------------------------------------------------
-function bipolar(fl)
-    rate = 2500.0;
-    dt = 1/rate;
-    t0 = dt;
-    tf = 900.0; 
-    n = 384;
-
-    fout = open("../1_Raw/bipolar_"*fl*".bin","a");
+    fout = open("../1_Raw/bipolar_"*fl*".bin","w");
 
     t,prev_a = read_channel(1,t0,tf,fl)
     t,prev_b = read_channel(2,t0,tf,fl)
@@ -141,6 +82,47 @@ function bipolar(fl)
         write(fout,bip_b);
         write(fout,bip_c);
         write(fout,bip_d);
+
+    end
+    close(fout)
+
+end
+
+# -------------------------------------------------------------
+# Computes the CSD and stores it in a binary file
+# Computed using a diagonal Laplacian stencil
+# -------------------------------------------------------------
+function csd(fl)
+    rate = 2500.0;
+    dt = 1/rate;
+    t0 = dt;
+    tf = 900.0; 
+    n = 384;
+
+    fout = open("../1_Raw/csd_"*fl*".bin","w");
+
+    t,ch_5 = read_channel(1,t0,tf,fl)
+    t,ch_6 = read_channel(2,t0,tf,fl)
+    t,ch_7 = read_channel(3,t0,tf,fl)
+    t,ch_8 = read_channel(4,t0,tf,fl)
+
+    inv_dy2=1/25.61^2; # 1/μm
+    σ = 1.0; # conductivity S/μm or 1/ (Ω μm)
+
+    for id in 5:4:n
+
+        ch_1=ch_5; ch_2=ch_6; ch_3=ch_7; ch_4=ch_8
+
+        t,ch_5 = read_channel(id+0,t0,tf,fl)
+        t,ch_6 = read_channel(id+1,t0,tf,fl)
+        t,ch_7 = read_channel(id+2,t0,tf,fl)
+        t,ch_8 = read_channel(id+3,t0,tf,fl)
+
+        csd_right= - σ*inv_dy2*( -4.0*ch_4 + ch_1 + ch_2 + ch_5 + ch_6 );
+        csd_left = - σ*inv_dy2*( -4.0*ch_5 + ch_3 + ch_4 + ch_7 + ch_8 );
+
+        write(fout,csd_right);
+        write(fout,csd_left);
 
     end
     close(fout)
@@ -247,9 +229,42 @@ function movfilter(t,tfhm,fl)
     f_tfhm = tfhm[:,indx];
     indx,f_tfhm
 end
-#--------------------------------------------------------------
 # -------------------------------------------------------------
+# -------------------------------------------------------------
+# Postprocessing (only needs to be done once)
+# -------------------------------------------------------------
+# -------------------------------------------------------------
+# Compute bipolar and csd 
+# bipolar("pre")
+# bipolar("post")
+# csd("pre")
+# csd("post")
 
+# Check bipolars ----------------------------------------------
+# t0=100
+# tf=110
+# t,bip=read_channel(100,t0,tf,"bipolar_pre");
+# t,ch1=read_channel(100,t0,tf,"pre");
+# t,ch2=read_channel(104,t0,tf,"pre");
+# t,ch3=read_channel(108,t0,tf,"pre");
+
+# plot(bip)
+# plot!((ch1-ch3)/(2*20.0),lw=0.5)
+
+# sum(abs.(bip-(ch1-ch3)/(2*20.0)))
+
+# # Check CSD ---------------------------------------------------
+# t,cs=read_channel(100,t0,tf,"csd_pre");
+# t,ch5=read_channel(201,t0,tf,"pre");
+# t,ch3=read_channel(199,t0,tf,"pre");
+# t,ch4=read_channel(200,t0,tf,"pre");
+# t,ch7=read_channel(203,t0,tf,"pre");
+# t,ch8=read_channel(204,t0,tf,"pre");
+
+# plot(cs)
+# plot!((4*ch5-ch3-ch4-ch7-ch8)/(25.61^2),lw=0.1)
+
+# sum(abs.(cs-(4*ch5-ch3-ch4-ch7-ch8)/(25.61^2)))
 # --------------------------------------------------------------
 # --------------------------------------------------------------
 # WORKFLOW:
@@ -258,35 +273,31 @@ end
 
 # Load time series for a specific channel from second 200 to 300:
 t0=100;
-tf=200;
-id=123;
-fl="pre"
-
+tf=100.1;
+id=1;
+fl="post"
 t,chdat=read_channel(id,t0,tf,fl);
 
-# Comapring bipolar and raw data:
-#--------------------------------------------------------------
-# Load time series for a specific channel from second 200 to 300:
-t0=1/2500.0;
-tf=300;
+# distance analysis, to validate distance between sites
+diff=zeros(96,6);
+for i in 1:4:384
+    t,ch1=read_channel(i+0,t0,tf,fl);
+    t,ch2=read_channel(i+1,t0,tf,fl);
+    t,ch3=read_channel(i+2,t0,tf,fl);
+    t,ch4=read_channel(i+3,t0,tf,fl);
+    diff[Int(floor(i/4))+1,1]=norm(ch1-ch2)
+    diff[Int(floor(i/4))+1,2]=norm(ch1-ch3)
+    diff[Int(floor(i/4))+1,3]=norm(ch1-ch4)
+    diff[Int(floor(i/4))+1,4]=norm(ch2-ch3)
+    diff[Int(floor(i/4))+1,5]=norm(ch2-ch4)
+    diff[Int(floor(i/4))+1,6]=norm(ch3-ch4)
+end
 
-fl="pre"
-t,ch1=read_channel(1,t0,tf,fl);
-t,ch5=read_channel(5,t0,tf,fl);
-t,ch9=read_channel(9,t0,tf,fl);
-
-fl="bipolar_pre"
-t,bi5=read_channel(1,t0,tf,fl);
-
-
-plot(ch1[1:1000])
-plot!(ch5[1:1000])
-# plot!(ch9[1:1000])
-plot!(data[1:1000])
-plot!((ch1[1:1000]-ch9[1:1000]))
 
 
 # Compute PSD using Multitaper PSD ----------------------------
+fl="pre"
+t,chdat=read_channel(150,t0,tf,fl);
 rate=2500.0;
 dt=1.0/rate;
 
