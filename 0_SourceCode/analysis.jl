@@ -36,7 +36,7 @@ end
 # -------------------------------------------------------------
 # Creates the CSD binary file by computing the Laplacian [UNDER DEVELOPMENT]
 # -------------------------------------------------------------
-function bipolar(fl)
+function compute_bipolar(fl)
     rate = 2500.0;
     dt = 1/rate;
     t0 = dt;
@@ -92,7 +92,7 @@ end
 # Computes the CSD and stores it in a binary file
 # Computed using a diagonal Laplacian stencil
 # -------------------------------------------------------------
-function csd(fl)
+function compute_csd(fl)
     rate = 2500.0;
     dt = 1/rate;
     t0 = dt;
@@ -131,23 +131,22 @@ end
 
 
 #--------------------------------------------------------------
-# Spectral heatmap with Multitaper PSD for all channels and a time frame
+# Spectral heatmap with Multitaper PSD for specific channels and a time frame
 #--------------------------------------------------------------
-function heatmapMT(t0,tf,fl)
+function heatmapMT(t0,tf,fl,channels)
     
     rate = 2500.0;
     dt = 1.0/rate;
-    n = 384;
+    n = size(channels,1); 
     m = 250001;
     NW = 1.0*m*dt/(2.0) ;  #bandwith is W*dt/2.0, and NW = N*W*dt/2.0
     K = 8;    # number of tappers (should be less than 2*NW)
-
 
     l = 30002; # WARNING: This assumes relevant frequencies below entry l of the spectra
     hm = zeros(n,l);
 
     local S;  
-    Threads.@threads for id in 1:n
+    Threads.@threads for id in channels
         t,chdat=read_channel(id,t0,tf,fl);
         S  = multispec(chdat, dt=dt, NW=NW, K=K,jk=true,Ftest=true, a_weight=true);
         hm[id,:] = S.S[1:l] 
@@ -217,7 +216,7 @@ function timefreq(id,fl)
 end
 
 #--------------------------------------------------------------
-# Authomatic removal of segments including (pre-) movement data
+# Authomatic removal of segments including movement data
 # notice that this function assumes Δt=10
 #--------------------------------------------------------------
 function movfilter(t,tfhm,fl)
@@ -235,36 +234,12 @@ end
 # -------------------------------------------------------------
 # -------------------------------------------------------------
 # Compute bipolar and csd 
-# bipolar("pre")
-# bipolar("post")
-# csd("pre")
-# csd("post")
+# compute_bipolar("pre")
+# compute_bipolar("post")
+# compute_csd("pre")
+# compute_csd("post")
 
-# Check bipolars ----------------------------------------------
-# t0=100
-# tf=110
-# t,bip=read_channel(100,t0,tf,"bipolar_pre");
-# t,ch1=read_channel(100,t0,tf,"pre");
-# t,ch2=read_channel(104,t0,tf,"pre");
-# t,ch3=read_channel(108,t0,tf,"pre");
 
-# plot(bip)
-# plot!((ch1-ch3)/(2*20.0),lw=0.5)
-
-# sum(abs.(bip-(ch1-ch3)/(2*20.0)))
-
-# # Check CSD ---------------------------------------------------
-# t,cs=read_channel(100,t0,tf,"csd_pre");
-# t,ch5=read_channel(201,t0,tf,"pre");
-# t,ch3=read_channel(199,t0,tf,"pre");
-# t,ch4=read_channel(200,t0,tf,"pre");
-# t,ch7=read_channel(203,t0,tf,"pre");
-# t,ch8=read_channel(204,t0,tf,"pre");
-
-# plot(cs)
-# plot!((4*ch5-ch3-ch4-ch7-ch8)/(25.61^2),lw=0.1)
-
-# sum(abs.(cs-(4*ch5-ch3-ch4-ch7-ch8)/(25.61^2)))
 # --------------------------------------------------------------
 # --------------------------------------------------------------
 # WORKFLOW:
@@ -277,23 +252,6 @@ tf=100.1;
 id=1;
 fl="post"
 t,chdat=read_channel(id,t0,tf,fl);
-
-# distance analysis, to validate distance between sites
-diff=zeros(96,6);
-for i in 1:4:384
-    t,ch1=read_channel(i+0,t0,tf,fl);
-    t,ch2=read_channel(i+1,t0,tf,fl);
-    t,ch3=read_channel(i+2,t0,tf,fl);
-    t,ch4=read_channel(i+3,t0,tf,fl);
-    diff[Int(floor(i/4))+1,1]=norm(ch1-ch2)
-    diff[Int(floor(i/4))+1,2]=norm(ch1-ch3)
-    diff[Int(floor(i/4))+1,3]=norm(ch1-ch4)
-    diff[Int(floor(i/4))+1,4]=norm(ch2-ch3)
-    diff[Int(floor(i/4))+1,5]=norm(ch2-ch4)
-    diff[Int(floor(i/4))+1,6]=norm(ch3-ch4)
-end
-
-
 
 # Compute PSD using Multitaper PSD ----------------------------
 fl="pre"
@@ -313,67 +271,35 @@ p1=plot(S.f,S.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
 # plot(S.f,S.Fpval,ylim=(0.0,1e-2),lt=:scatter,xlim=(0,100))
 
 
-
-# # Compute the PSD using standard FFT:--------------------------
-# using FFTW
-# rate=2500.0;
-# dt=1.0/rate;
-# Fr = rfft(chdat); 
-# wr = rfftfreq(length(t), rate); 
-# plot(wr, abs.(Fr),xlim=(0,100)) # Logscale with yaxis=:log
-
-# plot(wr,abs2.(Fr),xlim=(0,100),ylim=(0,1e-7),lw=0.5,yaxis=:log)
-# plot!(S.f,S.S.*length(S.f)/dt,yaxis=:log,lw=2,ylim=(1e-10,5e-7))
-# #--------------------------------------------------------------
-
-
-
-
-# --- some notes about  multitaper and standard fft------------
-#
-# plot(S,xlim=(0,200),ylim=(1e-20,5e-16)) # authomatic MT plot
-#
-# Comparison between multitaper and standard fft:
-# Notice that multitaper package normalizes by dt/N, similar to what I am doing in C.
-# plot(S.f,S.S.*length(S.f)/dt)
-# plot!(wr,abs2.(Fr),xlim=(0,100),ylim=(0,1e-7),lw=0.1,yaxis=:log)
-#
-# Plot including 95% confidence intervals, as in the authomatic version...
-# does not look right...it seems that the authomatic recipe plots the confidence
-# for the log-spectra, and not the true spectra
-# using StatsFuns
-# z=norminvcdf(0,1,0.975);
-# plot(S.f,S.S,xlim=(0,200),ylim=(0,2e-16))
-# plot!(S.f,S.S.*exp.(-z*sqrt.(S.jkvar)),fillrange=S.S.*exp.(2*z*sqrt.(S.jkvar)),c=1,alpha=0.35)
-# plot!(yaxis=:log,ylim=(1e-20,5e-16))
-#
-# precompute tappers # or does not work, or it does not improve performance
-# @time dpss=dpss_tapers(length(chdat),NW,K);
-# @time Z  = multispec(chdat, dt=dt, NW=NW, K=K,jk=true,Ftest=true, a_weight=true, dpVec=dpss);
-# plot!(Z.f,Z.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=0.2,yaxis=:log)
-# -------------------------------------------------------------
-
 # -------------------------------------------------------------
 # Create a heatmap of the pre data from 200s to 300s using Multitaper:
-a,b=heatmapMT(200.0,300.0,fl)
-# writedlm("../4_outputs/psd_mthm.dat",b," ");
+w,lfp=heatmapMT(200.0,300.0,"pre",1:384);
+w,csd=heatmapMT(200.0,300.0,"csd_pre",1:190);
+w,bip=heatmapMT(200.0,300.0,"bipolar_pre",1:376);
+
+
+# heatmap(w,1:384,lfp')
+
+writedlm("../4_outputs/lfp.dat",lfp'," ");
+writedlm("../4_outputs/csd.dat",csd'," ");
+writedlm("../4_outputs/bip.dat",bip'," ");
 # -------------------------------------------------------------
 
 # -------------------------------------------------------------
 # Time-frequency analysis for a single channel:
-fl="pre"
-id=150
+fl="csd_pre"
+id=140
 t,f,tfhm = timefreq(id,fl);
-writedlm("../4_outputs/ch"*string(id)*"_tfhm_HD.dat",tfhm," ");
+writedlm("../4_outputs/ch"*string(id)*"_tfhm_"*fl*".dat",tfhm," ");
 
 # Remove the segments containing movement:
-f_idx,f_tfhm = movfilter(t,tfhm,fl);
+f_idx,f_tfhm = movfilter(t,tfhm,"pre");
 
 # Compute statistics for this channel:
 using Statistics, HypothesisTests
 mean_psd=mean(f_tfhm,dims=2);
 std_psd =std(f_tfhm,dims=2);
-plot(f,mean_psd,ribbon=std_psd,c=1,fillalpha=0.25)
+plot(f,mean_psd,ribbon=std_psd,c=1,fillalpha=0.25,yaxis=:log,yrange=(1e-23,0.2e-21))
 
 # -------------------------------------------------------------
 

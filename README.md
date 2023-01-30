@@ -3,13 +3,15 @@
 ## Index
 <!-- vim-markdown-toc GFM -->
 
-* [Processing of the `.mat` files](#processing-of-the-mat-files)
-	* [Local Field Potential files](#local-field-potential-files)
-	* [Reading binary files with C](#reading-binary-files-with-c)
-	* [Movement data](#movement-data)
-* [Data Overview](#data-overview)
-* [Bipolar and CSD](#bipolar-and-csd)
-* [Frequency analysis:](#frequency-analysis)
+- [Analysis of LFP from UPO-tACS Dataset](#analysis-of-lfp-from-upo-tacs-dataset)
+	- [Index](#index)
+	- [Processing of the `.mat` files](#processing-of-the-mat-files)
+		- [Local Field Potential files](#local-field-potential-files)
+		- [Reading binary files with C](#reading-binary-files-with-c)
+		- [Movement data](#movement-data)
+	- [Data Overview](#data-overview)
+	- [Bipolar and CSD](#bipolar-and-csd)
+	- [Frequency analysis](#frequency-analysis)
 
 <!-- vim-markdown-toc -->
 
@@ -89,14 +91,14 @@ The Julia code `analysis.jl` contains the functions `bipolar()` and `csd()`
 that read the original LFP data and compute, respectively, the bipolar potential
 differences and the CSD:
 
-- `bipolar()` computes the first derivative using the columns of the prove. 
+- `bipolar()` computes the first derivative along each column of the prove. 
 Therefore, in the `bipolar_<flag>.bin` binary files the 4 first and the 4 last channels
-are missing. Hence `read_channel(1,t0,tf,"bipolar_pre")` reads the bipolar data for channel 5.
+are missing. So there are 376 channels in the binaries, and `read_channel(id,t0,tf,"bipolar_pre")` reads the bipolar data for channel `id+4`.
 
-- `csd()` computes the CSD using Poisson's equation for the inner columns of the prove.
+- `csd()` computes the CSD using Poisson's equation. It can only be calculated within the inner columns of the prove.
 Therefore, in `csd_<flag>.bin` only 384/2-2=190 channels are computed (the two inner columns minus
-the first and last row, i.e., channels 1 and 384). The relation of `read_channel` and the actual
-channel therefore is:
+the first and last row, i.e., channels 1 and 384). The relation between what is passed to `read_channel` and the actual
+channel is given in the following table:
 
 | `id` | `channel`  |
 |:-:   |:-:         |
@@ -104,15 +106,15 @@ channel therefore is:
 |  2   |    5       |
 |  3   |    8       |
 |  4   |    9       |
-|  ... |            |
+|  ... |     ...    |
 |  i   | 2i+1+i%2   |
-|  ... |            |
+|  ... |     ...    |
 |  188 |   377      |
 |  189 |   380      |
 |  190 |   381      |
 
 
-## Frequency analysis:
+## Frequency analysis
 
 Use script `freq_image.sh` (Tools folder).
 It can be used to generate psd for each channel and gather 
