@@ -34,7 +34,7 @@ function read_channel(id,t0,tf,fl) # Equivalent to the read_binary.c code
 end
 
 # -------------------------------------------------------------
-# Creates the CSD binary file by computing the Laplacian [UNDER DEVELOPMENT]
+# Creates the CSD binary file by computing the Laplacian 
 # -------------------------------------------------------------
 function compute_bipolar(fl)
     rate = 2500.0;
@@ -248,10 +248,14 @@ end
 
 # Load time series for a specific channel from second 200 to 300:
 t0=100;
-tf=100.1;
-id=1;
-fl="post"
+tf=200.0;
+id=196;
+fl="pre"
 t,chdat=read_channel(id,t0,tf,fl);
+
+jd=Int((id-2)/2) # the formula changes if id is even
+t,chcsd=read_channel(jd,t0,tf,"csd_pre")
+
 
 # Compute PSD using Multitaper PSD ----------------------------
 fl="pre"
