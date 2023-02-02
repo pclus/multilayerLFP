@@ -12,6 +12,7 @@
  sum(abs.(bip-(ch1-ch3)/(2*20.0)))
 
  # Check CSD ---------------------------------------------------
+  # Check CSD ---------------------------------------------------
  t,cs=read_channel(100,t0,tf,"csd_pre");
  t,ch5=read_channel(201,t0,tf,"pre");
  t,ch3=read_channel(199,t0,tf,"pre");
@@ -19,8 +20,8 @@
  t,ch7=read_channel(203,t0,tf,"pre");
  t,ch8=read_channel(204,t0,tf,"pre");
 
- plot(cs)
- plot!((4*ch5-ch3-ch4-ch7-ch8)/(25.61^2),lw=0.1)
+ plot(cs,lw=2)
+ plot!((4*ch5-ch3-ch4-ch7-ch8)/(25.61^2),lw=1,xlim=(0,100))
 
  sum(abs.(cs-(4*ch5-ch3-ch4-ch7-ch8)/(25.61^2)))
 
