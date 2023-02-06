@@ -247,7 +247,7 @@ end
 # --------------------------------------------------------------
 
 # Load time series for a specific channel from second 200 to 300:
-t0=100;
+ t0=100;
 tf=200.0;
 id=196;
 fl="pre"

@@ -87,32 +87,35 @@ plot 'mov_pre.dat' u 1:(-1e-5):(0):(2e-5) w vectors nohead lc 'gray' , 'pre1.dat
 
 ## Bipolar and CSD
 
-The Julia code `analysis.jl` contains the functions `bipolar()` and `csd()`
+The Julia code `analysis.jl` contains the functions `compute_bipolar()` and `compute_csd()`
 that read the original LFP data and compute, respectively, the bipolar potential
 differences and the CSD:
 
-- `bipolar()` computes the first derivative along each column of the prove. 
+- `compute_bipolar()` computes the first derivative along each column of the prove. 
 Therefore, in the `bipolar_<flag>.bin` binary files the 4 first and the 4 last channels
 are missing. So there are 376 channels in the binaries, and `read_channel(id,t0,tf,"bipolar_pre")` reads the bipolar data for channel `id+4`.
 
-- `csd()` computes the CSD using Poisson's equation. It can only be calculated within the inner columns of the prove.
+- `compute_csd()` computes the CSD using Poisson's equation. It can only be calculated within the inner columns of the prove.
 Therefore, in `csd_<flag>.bin` only 384/2-2=190 channels are computed (the two inner columns minus
 the first and last row, i.e., channels 1 and 384). The relation between what is passed to `read_channel` and the actual
 channel is given in the following table:
 
-| `id` | `channel`  |
-|:-:   |:-:         |
-|  1   |    4       |
-|  2   |    5       |
-|  3   |    8       |
-|  4   |    9       |
-|  ... |     ...    |
-|  i   | 2i+1+i%2   |
-|  ... |     ...    |
-|  188 |   377      |
-|  189 |   380      |
-|  190 |   381      |
+<div align="center">
 
+|`id`| 1 | 2 | 3 | 4 |... | i | ... | 188 | 189 | 190 |
+|:-: |:-:|:-:|:-:|:-:|:-:| :-: | :-: | :-: | :-:|  :-:|
+| `channel` | 4 | 5 | 8 | 9 | ...  | 2i+1+i%2 | ... | 377 | 380 | 381 |
+
+</div>
+
+Alternatively we also use the [kernel-CSD](https://doi.org/10.1162/neco_a_00236).
+For this we use the [Python library](http://biorxiv.org/lookup/doi/10.1101/708511) created by the same group. This method has several advantages (and some constrains):
+- It works with arbitrary positions of the electrodes.
+- It is more robust to measurement noise and broken electrodes.
+- Assumes arbitrary number of sources with Gaussian profiles.
+- On the downside, has many parameters to tune, which might cause artifacts if not set properly.
+
+We are still generating, validating, and comparing the results. 
 
 ## Frequency analysis
 
@@ -178,16 +181,18 @@ plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 
 Next steps:
 
-1. Look for differences in time-frequency accross channels: Kmeans might be missleading (cloud points), should use different tools:
+1. Look for differences in **time-frequency** accross channels: Kmeans might be missleading (cloud points), should use different tools:
 	- [] Moving window time-freq heatmap to visualize better the differences.
-	- [] Clusting algorithm with authomatic cluster detection.
+	- [] Non-parametric analysis
 	- ...
-2. Band-pass filter or freq. bands comparison 
-	- [] Repeat pre/post analysis with single-long chunk of time-series.
-3. Ask UPO:
+2. [x] CSD using k-density method. Compare time-snapshots using LaplacianCSD and kCSD, compare also results from frequency analysis.
+3. Band-pass filter or freq. bands comparison 
+	- [] Check phase-amplitude relation between $\alpha$ and $\gamma$
+4. Ask UPO:
 	- [] Are the movement artifacts because of the movement, or the change in "brain state"? Ask UPO
-	- [] What happens with the 50Hz and 60 Hz artifacts?
-4. Other:
+	- [] What's the reason for the 50Hz and 60 Hz artifacts?
+5. Other:
 	- [] P-values heatmaps, use 4 colors (3 + white), one for each decade.
 	- [] T-test assumes normalitiy, should check there are no long tails at least.
+	- [] Look for other tests (Giulio send a paper)
 
