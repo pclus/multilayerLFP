@@ -1,0 +1,15 @@
+set term qt font ',12'
+set pale @BLUERED
+set rmargin 15
+set lmargin 5
+
+set xlabel 'x [{/Symbol m}m]'
+set ylabel 'y [{/Symbol m}m]'
+set cblabel 'estimated CSD'
+
+set xrange[-30:105]
+set yrange[-60:3905]
+set cbrange[-7e-10:7e-10]
+set object 1 rect from 0,0 to 70,3840 fs empty border rgb 'black' front
+
+plot 'kCSD.dat' matrix u (5*$2+2.5-30.0):(5*$1+2.5-60):3 w image, '../../1_Raw/electrode_locations.dat' w p ps 1.2 lc 'black' t ''
