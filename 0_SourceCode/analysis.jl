@@ -1,5 +1,5 @@
 #!/usr/bin/env -S julia --threads 16
-using DelimitedFiles,Multitaper,Plots;
+using DelimitedFiles,Multitaper,Plots,DSP;
 
 # -------------------------------------------------------------
 # -------------------------------------------------------------
@@ -32,6 +32,13 @@ function read_channel(id,t0,tf,fl) # Equivalent to the read_binary.c code
     
     return t, channel;
 end
+
+# # -------------------------------------------------------------
+# # Bandpass filter
+# function filter(data, f0, fmax)
+
+# end
+# # -------------------------------------------------------------
 
 # -------------------------------------------------------------
 # Creates the CSD binary file by computing the Laplacian 
@@ -247,14 +254,21 @@ end
 # --------------------------------------------------------------
 
 # Load time series for a specific channel from second 200 to 300:
- t0=100;
+t0=100;
 tf=200.0;
 id=196;
 fl="pre"
 t,chdat=read_channel(id,t0,tf,fl);
 
-jd=Int((id-2)/2) # the formula changes if id is even
-t,chcsd=read_channel(jd,t0,tf,"csd_pre")
+# jd=Int((id-2)/2) # the formula changes if id is even
+# t,chcsd=read_channel(jd,t0,tf,"csd_pre")
+
+# Bandpass filter
+bpfilter = digitalfilter(Bandpass(0.1,0.15; fs=2500),Butterworth(3));
+fil_chdat=filtfilt(bpfilter,chdat)
+
+plot(t,chdat)
+plot!(t,fil_chdat)
 
 
 # Compute PSD using Multitaper PSD ----------------------------
