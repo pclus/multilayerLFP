@@ -185,7 +185,13 @@ Next steps:
 	- [] Moving window time-freq heatmap to visualize better the differences.
 	- [] Non-parametric analysis
 	- ...
-2. [x] CSD using k-density method. Compare time-snapshots using LaplacianCSD and kCSD, compare also results from frequency analysis.
+2. [x] CSD using k-density method. 
+	- [] Try bandpassing the signal to reduce noise
+	- [] Cross-validate for proper parameters.
+	- [x] Compare time-snapshots using LaplacianCSD and kCSD.
+	- [] Authomatize export of the kCSD data to a binary file.
+	- [] Compare results from frequency analysis.
+	
 3. Band-pass filter or freq. bands comparison 
 	- [] Check phase-amplitude relation between $\alpha$ and $\gamma$
 4. Ask UPO:

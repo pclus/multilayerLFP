@@ -27,14 +27,14 @@ def read_data_chunk(t0,tf):
 # --
 # modifyied from the KCSD tutorial.
 def do_kcsd(ele_pos, pots):
-    h = 10.     # thickness
+    h = 10.0     # thickness
     sigma = 1.0 # S/m
     length = pots.shape[1] # size of time dimensions
     pots = pots.reshape((len(ele_pos), length)) 
     k = KCSD2D(ele_pos, pots, h=h, sigma=sigma,                                                                                                                                                       
-               xmin=-30.0, xmax=100.0,
+               xmin=-200.0, xmax=200.0,
                ymin=-60.0, ymax=3900.0,
-               n_src_init=1000, src_type='gauss', R_init=40,lambd=1e-5, gdx=5.0,gdy=5.0) # gdx and gdy are the spatial resolutions
+               n_src_init=2000, src_type='gauss', R_init=40,lambd=1e-7, gdx=5.0,gdy=5.0) # gdx and gdy are the spatial resolutions
     return k
 # --
 
@@ -59,7 +59,8 @@ def make_plot(xx, yy, zz, title='CSD', cmap=cm.bwr):
 
 # -- 
 # Define electrode locations (centers of the 12x12 squares)
-x_pos = np.array([29, 61, 13, 45 ])
+# x_pos = np.array([29, 61, 13, 45 ])   # 0 is the left boundary of the probe
+x_pos = np.array([-6, 26, -22, 10 ])    # 0 is the center of the probe
 ele_x = np.tile(x_pos,96)
 ele_y = [i for i in range(6,3840, 20) for j in range(2)]
 ele_pos = np.column_stack((ele_x, ele_y))
@@ -73,14 +74,15 @@ ele_pos = np.column_stack((ele_x, ele_y))
 # --
 
 # -- 
-# Read 100 data points, compute, and plot the kCSD
-pots =read_data_chunk(0.0004,100.0)
+# Read s seconds, compute, and plot the kCSD
+s = 1.0
+pots =read_data_chunk(0.0004,0.0004)
 k = do_kcsd(ele_pos, pots)
 est_csd = k.values('CSD')
 
 # --
 f1=plt.figure(1)
-plt.imshow(np.transpose(est_csd[:,::-1,122]),cmap=cm.bwr,aspect='auto') 
+plt.imshow(np.transpose(est_csd[:,::-1,0]),cmap=cm.bwr,aspect='auto') 
 plt.show()
 # --
 
@@ -111,7 +113,12 @@ store them in different binaries, and then reorder the chunkcs in a unique big f
 # # #f2.show()
 
 # # check the preprint. it works, but it does not compute the error function, but a modified version
-# k.cross_validate(lambdas=np.logspace(-7, -1, num=7), Rs=np.linspace(10, 100, num=10))
+# k.cross_validate(lambdas=np.logspace(-9, -1, num=9), Rs=np.linspace(10, 100, num=10))
+
+# CHECK SOURCE LOCATIONS:...
+p1=plt.scatter(k.src_x, k.src_y, 10, c='k')
+plt.show()
+
 
 # est_csd = k.values('CSD')
 
