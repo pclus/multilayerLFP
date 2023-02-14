@@ -7,7 +7,23 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
 # ---- Functions ----
+class kcsd_opts:
+    def __init__(self, h=1.0,sigma=1.0,xmin=-200.0,xmax=200.0,ymin=-60.0,
+                 ymax=3900.0,n_src_init=2000,src_type='gauss',R_init=40.0,lambd=1e-6,gdx=5.0,gdy=5.0):
+        self.h=h
+        self.sigma=sigma
+        self.xmin=xmin
+        self.xmax=xmax
+        self.ymin=ymin
+        self.ymax=ymax
+        self.n_src_init=n_src_init
+        self.src_type=src_type
+        self.R_init=R_init
+        self.lambd=lambd
+        self.gdx=gdx
+        self.gdy=gdy
 
+opts=kcsd_opts()
 # --
 # Read the bindary file "pre.bin"
 def read_data_chunk(t0,tf):
@@ -27,29 +43,33 @@ def read_data_chunk(t0,tf):
 
 # --
 # modifyied from the KCSD tutorial.
-def do_kcsd(ele_pos, pots):
+def do_kcsd(ele_pos, pots,opts):
     h = 10.0     # thickness
     sigma = 1.0 # S/m
     length = pots.shape[1] # size of time dimensions
     pots = pots.reshape((len(ele_pos), length)) 
-    k = KCSD2D(ele_pos, pots, h=h, sigma=sigma,                                                                                                                                                       
-               xmin=-200.0, xmax=200.0,
-               ymin=-60.0, ymax=3900.0,
-               n_src_init=2000, src_type='gauss', R_init=40,lambd=1e-7, gdx=5.0,gdy=5.0) # gdx and gdy are the spatial resolutions
+    k = KCSD2D(ele_pos, pots, h=opts.h, sigma=opts.sigma,                                                                                                                                                       
+               xmin=opts.xmin, xmax=opts.xmax,
+               ymin=opts.ymin, ymax=opts.ymax,
+               n_src_init=opts.n_src_init, src_type=opts.src_type,
+               R_init=opts.R_init,lambd=opts.lambd,
+               gdx=opts.gdx,gdy=opts.gdy)
 
     return k
 # --
 
 # ---
 # compute error:
-def kcsd_error(k,ele_x,ele_y):
-    ownk = oKCSD2D(ele_pos, pots, h=k.h, sigma=k.sigma,                                                                                                                                                       
-                xmin=k.xmin, xmax=k.xmax,
-                ymin=k.ymin, ymax=k.ymax,
-                n_src_init=k.n_src_init, src_type=k.src_type, R_init=k.R_init,lambd=k.lambd,own_est=np.array((ele_x,ele_y)),own_src=(k.src_x,k.src_y)) 
+def kcsd_error(ele_pos,pots,ele_x,ele_y,opts):
+    ownk = oKCSD2D(ele_pos, pots, h=opts.h, sigma=opts.sigma,                                                                                                                                                       
+                xmin=opts.xmin, xmax=opts.xmax,
+                ymin=opts.ymin, ymax=opts.ymax,
+                n_src_init=opts.n_src_init, src_type=opts.src_type,
+                R_init=opts.R_init,lambd=opts.lambd,
+                own_est=np.array((ele_x,ele_y)),own_src=(opts.src_x,opts.src_y)) 
 
     est_pots = ownk.values('POT')
-    error = np.linalg.norm(k.pots-est_pots)**2 + k.lambd*np.linalg.norm(est_pots);
+    error = np.linalg.norm(k.pots-est_pots)**2 + opts.lambd*np.linalg.norm(est_pots);
     return ownk,error;
 # ---
 
@@ -88,20 +108,77 @@ ele_pos = np.column_stack((ele_x, ele_y))
 # plt.show()
 # --
 
-
 # -- 
 # Read s seconds, compute, and plot the kCSD
 s = 1.0
-pots =read_data_chunk(0.0004,10.0)
-k = do_kcsd(ele_pos, pots)
+pots =read_data_chunk(0.0004,0.01)
+k = do_kcsd(ele_pos, pots,opts)
 est_csd = k.values('CSD')
-redk, err = kcsd_error(k,ele_x,ele_y)
+opts.src_x=k.src_x;
+opts.src_y=k.src_y;
+redk, err = kcsd_error(ele_pos,pots,ele_x,ele_y,opts)
+# --
 
-# # --
-# f1=plt.figure(1)
-# plt.imshow(np.transpose(est_csd[:,::-1,0]),cmap=cm.bwr,aspect='auto') 
-# plt.show()
-# # --
+# --
+# CV to obtain reasonable values of R and lambda.
+# It does not compute the error function, but a modified version, a bit heavy for long time series
+k.cross_validate(lambdas=np.logspace(-9, -1, num=9), Rs=np.linspace(10, 100, num=10))
+# Result: R,lambda : 60.0 1e-6
+# --
+
+# --
+f1=plt.figure(1)
+plt.imshow(np.transpose(est_csd[:,::-1,0]),cmap=cm.bwr,aspect='auto') 
+plt.show()
+# --
+
+# --
+def kcsd_validation(Rs,lambdas,k):
+    kcsd_errors = np.zeros([Rs.size,lambdas.size])
+    for i,R in enumerate(Rs):
+        for j,lambd in enumerate(lambdas):
+            kred, err = kcsd_error(k,ele_x,ele_y,R,lambd)
+            kcsd_errors[i,j] = err;
+    return kcsd_errors;
+# --
+
+lambdas=np.logspace(-9, -1, num=9);
+Rs=np.linspace(10, 100, num=10);
+errors=kcsd_validation(Rs,lambdas,ele_pos,pots)
+plt.imshow(errors); plt.show();
+# provides minimal values for R=40 and lambda=1e-9 ...but one should take into account the effect of lambda on the calculation of the error
+# --
+
+def export_at_electrodes(ele_pos,pots,ele_x,ele_y,ops):
+    pots =read_data_chunk(0.0004,900.0)
+    redk = oKCSD2D(ele_pos, pots, h=ops.h, sigma=ops.sigma,                                                                                                                                                       
+            xmin=ops.xmin, xmax=ops.xmax,
+            ymin=ops.ymin, ymax=ops.ymax,
+            n_src_init=ops.n_src_init, src_type=ops.src_type, 
+            R_init=ops.R_init,lambd=ops.lambd,own_est=np.array((ele_x,ele_y)),own_src=(ops.src_x,ops.src_y)) 
+    est_csd = redk.values('CSD')
+    # est_pot = redk.values('POT')
+    with open("/home/pclusella/Documents/Data/UPO-tACs/1_Raw/kCSD_electrodes_pre.bin", "wb") as fout:
+        est_csd.tofile(fout,"");
+    return est_csd;
+
+def export_at_centers(ele_pos,pots,ops):
+    pots =read_data_chunk(0.0004,900.0)
+    loc_y=np.arange(opts.ymin,opts.ymax,ops.gdy)
+    loc_x=np.zeros(loc_y.size)
+    redk = oKCSD2D(ele_pos, pots, h=ops.h, sigma=ops.sigma,                                                                                                                                                       
+            xmin=ops.xmin, xmax=ops.xmax,
+            ymin=ops.ymin, ymax=ops.ymax,
+            n_src_init=ops.n_src_init, src_type=ops.src_type, 
+            R_init=ops.R_init,lambd=ops.lambd,own_est=np.array((loc_x,loc_y)),own_src=(ops.src_x,ops.src_y)) 
+    est_csd = redk.values('CSD')
+    # est_pot = redk.values('POT')
+    with open("/home/pclusella/Documents/Data/UPO-tACs/1_Raw/kCSD_centers_pre.bin", "wb") as fout:
+        est_csd.tofile(fout,"");
+    return est_csd;
+
+csd_electro=export_at_electrodes(ele_pos,pots,ele_x,ele_y,opts)
+csd_centers=export_at_centers(ele_pos,pots,opts)
 
 # --
 # save data to plot in gnuplot
@@ -144,12 +221,11 @@ store them in different binaries, and then reorder the chunkcs in a unique big f
 # #           title='Estimated CSD without CV', cmap=cm.bwr) # First time point
 # # #f2.show()
 
-# # check the preprint. it works, but it does not compute the error function, but a modified version
-# k.cross_validate(lambdas=np.logspace(-9, -1, num=9), Rs=np.linspace(10, 100, num=10))
+
 
 # CHECK SOURCE LOCATIONS:...
-p1=plt.scatter(k.src_x, k.src_y, 10, c='k')
-plt.show()
+# p1=plt.scatter(k.src_x, k.src_y, 10, c='k')
+# plt.show()
 
 
 # est_csd = k.values('CSD')
