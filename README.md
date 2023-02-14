@@ -10,7 +10,7 @@
 		- [Reading binary files with C](#reading-binary-files-with-c)
 		- [Movement data](#movement-data)
 	- [Data Overview](#data-overview)
-	- [Bipolar and CSD](#bipolar-and-csd)
+	- [Bandpass filter, bipolar, and CSD](#bandpass-filter-bipolar-and-csd)
 	- [Frequency analysis](#frequency-analysis)
 
 <!-- vim-markdown-toc -->
@@ -46,7 +46,7 @@ The Julia function `read_channel()` in `analysis.jl` takes care of this (see lat
 However we include an additional C function that can be used directly
 
 The function `readbin` can be used to read such binary files
-Source code is stored in the `0_SourceCode`directory.
+Source code is stored in the `0_SourceCode` directory.
 The usage of the function is 
 
 ```
@@ -85,17 +85,19 @@ If `pre1.dat` contains all the 900s of a channel, then in gnuplot one can use:
 plot 'mov_pre.dat' u 1:(-1e-5):(0):(2e-5) w vectors nohead lc 'gray' , 'pre1.dat' ev 10 w l lc 1 lw 1
 ```
 
-## Bipolar and CSD
+## Bandpass filter, bipolar, and CSD
 
-The Julia code `analysis.jl` contains the functions `compute_bipolar()` and `compute_csd()`
-that read the original LFP data and compute, respectively, the bipolar potential
+The Julia code `analysis.jl` contains the functions `bandpass_filter()`, `compute_bipolar()`, and `compute_csd()`
+that read and filter the original LFP data and compute, respectively, the bipolar potential
 differences and the CSD:
 
-- `compute_bipolar()` computes the first derivative along each column of the prove. 
+- `bandpass_filter()` applies a Butterworth filter of order 3 to bandpass the original LFP data between 1-300Hz. This does not affect most of the frequency analysis (since we work in frequencies below 200Hz), but significantly reduces the noisy fluctuations.
+
+- `compute_bipolar()` computes the first derivative along each column of the prove of the filtered data. 
 Therefore, in the `bipolar_<flag>.bin` binary files the 4 first and the 4 last channels
 are missing. So there are 376 channels in the binaries, and `read_channel(id,t0,tf,"bipolar_pre")` reads the bipolar data for channel `id+4`.
 
-- `compute_csd()` computes the CSD using Poisson's equation. It can only be calculated within the inner columns of the prove.
+- `compute_csd()` computes the CSD using Poisson's equation on the filtered data. It can only be calculated within the inner columns of the prove.
 Therefore, in `csd_<flag>.bin` only 384/2-2=190 channels are computed (the two inner columns minus
 the first and last row, i.e., channels 1 and 384). The relation between what is passed to `read_channel` and the actual
 channel is given in the following table:

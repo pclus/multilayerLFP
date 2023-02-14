@@ -34,10 +34,25 @@ function read_channel(id,t0,tf,fl) # Equivalent to the read_binary.c code
 end
 
 # # -------------------------------------------------------------
-# # Bandpass filter
-# function filter(data, f0, fmax)
+# # Bandpass filter from 1-300Hz for noise reduction
+function bandpass_filter(fl)
+    rate = 2500.0;
+    dt = 1/rate;
+    t0 = dt;
+    tf = 900.0; 
+    n = 384;
 
-# end
+    bpfilter = digitalfilter(Bandpass(1.0,300.0; fs=2500),Butterworth(3));
+    fout = open("../1_Raw/filtered_"*fl*".bin","w");
+
+    for id in 1:384
+        t,ch = read_channel(id,t0,tf,fl)
+        fil_ch=filtfilt(bpfilter,chdat)
+        write(fout,fil_ch);
+    end
+    close(fout)
+
+end
 # # -------------------------------------------------------------
 
 # -------------------------------------------------------------
@@ -52,6 +67,7 @@ function compute_bipolar(fl)
 
     fout = open("../1_Raw/bipolar_"*fl*".bin","w");
 
+    fl="filtered_"*fl;
     t,prev_a = read_channel(1,t0,tf,fl)
     t,prev_b = read_channel(2,t0,tf,fl)
     t,prev_c = read_channel(3,t0,tf,fl)
@@ -107,6 +123,7 @@ function compute_csd(fl)
     n = 384;
 
     fout = open("../1_Raw/csd_"*fl*".bin","w");
+    fl="filtered_"*fl;
 
     t,ch_5 = read_channel(1,t0,tf,fl)
     t,ch_6 = read_channel(2,t0,tf,fl)
@@ -240,7 +257,9 @@ end
 # Postprocessing (only needs to be done once)
 # -------------------------------------------------------------
 # -------------------------------------------------------------
-# Compute bipolar and csd 
+# Compute filtered, bipolar and csd 
+# bandpass_filter("pre")
+# bandpass_filter("post")
 # compute_bipolar("pre")
 # compute_bipolar("post")
 # compute_csd("pre")
@@ -264,8 +283,10 @@ t,chdat=read_channel(id,t0,tf,fl);
 # t,chcsd=read_channel(jd,t0,tf,"csd_pre")
 
 # Bandpass filter
-bpfilter = digitalfilter(Bandpass(0.1,0.15; fs=2500),Butterworth(3));
+bpfilter = digitalfilter(Bandpass(1.0,300.0; fs=2500),Butterworth(3));
 fil_chdat=filtfilt(bpfilter,chdat)
+
+plotlyjs()
 
 plot(t,chdat)
 plot!(t,fil_chdat)
@@ -274,17 +295,19 @@ plot!(t,fil_chdat)
 # Compute PSD using Multitaper PSD ----------------------------
 fl="pre"
 t,chdat=read_channel(150,t0,tf,fl);
+bpfilter = digitalfilter(Bandpass(1.0,300.0; fs=2500),Butterworth(3));
+fil_chdat=filtfilt(bpfilter,chdat)
 rate=2500.0;
 dt=1.0/rate;
 
 NW = 1.0*length(chdat)*dt/(2.0) ;  # real bandwith is ω*dt/2.0, and NW = N*ω*dt/2.0
 K  = 10;    # number of tappers (should be similar slightly less than 2*NW)
-@time S  = multispec(chdat, dt=dt, NW=NW, K=K,jk=true,Ftest=true, a_weight=false);
-
-plot(S,xlim=(0,2000),ylim=(1e-18,5e-15))
+S  = multispec(chdat, dt=dt, NW=NW, K=K,jk=true,Ftest=true, a_weight=false);
+fS  = multispec(fil_chdat, dt=dt, NW=NW, K=K,jk=true,Ftest=true, a_weight=false);
 
 
 p1=plot(S.f,S.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
+plot!(fS.f,fS.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
 # Ftest pvalues
 # plot(S.f,S.Fpval,ylim=(0.0,1e-2),lt=:scatter,xlim=(0,100))
 
