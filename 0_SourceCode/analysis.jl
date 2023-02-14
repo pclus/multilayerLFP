@@ -47,8 +47,8 @@ function bandpass_filter(fl)
 
     for id in 1:384
         t,ch = read_channel(id,t0,tf,fl)
-        fil_ch=filtfilt(bpfilter,chdat)
-        write(fout,fil_ch);
+        fil_ch=filtfilt(bpfilter,ch)
+        write(fout,fil_ch)
     end
     close(fout)
 
@@ -258,12 +258,12 @@ end
 # -------------------------------------------------------------
 # -------------------------------------------------------------
 # Compute filtered, bipolar and csd 
-# bandpass_filter("pre")
-# bandpass_filter("post")
-# compute_bipolar("pre")
-# compute_bipolar("post")
-# compute_csd("pre")
-# compute_csd("post")
+bandpass_filter("pre")
+bandpass_filter("post")
+compute_bipolar("pre")
+compute_bipolar("post")
+compute_csd("pre")
+compute_csd("post")
 
 
 # --------------------------------------------------------------
@@ -271,6 +271,10 @@ end
 # WORKFLOW:
 # --------------------------------------------------------------
 # --------------------------------------------------------------
+
+
+# Comparison between raw and filtered data----------------------
+
 
 # Load time series for a specific channel from second 200 to 300:
 t0=100;

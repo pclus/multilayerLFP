@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from kcsd import KCSD2D
+from kcsd import oKCSD2D
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
@@ -17,7 +18,7 @@ def read_data_chunk(t0,tf):
     n=384
     m = 2250000; 
     data=np.zeros((n,mm))
-    with open("/home/pclusella/Documents/Data/UPO-tACs/1_Raw/pre.bin", "rb") as fin:
+    with open("/home/pclusella/Documents/Data/UPO-tACs/1_Raw/filtered_pre.bin", "rb") as fin:
         data[0,:]=np.fromfile(fin, dtype=np.double, count=mm, sep='',offset=m0)
         for i in range(1,n):
             data[i,:]=np.fromfile(fin, dtype=np.double, count=mm, sep='', offset=8*(m-mm))
@@ -35,25 +36,39 @@ def do_kcsd(ele_pos, pots):
                xmin=-200.0, xmax=200.0,
                ymin=-60.0, ymax=3900.0,
                n_src_init=2000, src_type='gauss', R_init=40,lambd=1e-7, gdx=5.0,gdy=5.0) # gdx and gdy are the spatial resolutions
+
     return k
 # --
 
-# --
-# modifyied from the KCSD tutorial
-# can be used with: ax=make_plot(k.estm_x, k.estm_y, est_csd[:, :, 0], cmap=cm.bwr) 
-def make_plot(xx, yy, zz, title='CSD', cmap=cm.bwr):
-    fig = plt.figure(figsize=(7, 7))
-    ax = plt.subplot(111)
-    t_max = np.max(np.abs(zz))
-    levels = np.linspace(-1 * t_max, t_max, 32)
-    im = ax.contourf(xx, yy, zz, levels=levels, cmap=cmap)
-    ax.set_xlabel('X (mm)')
-    ax.set_ylabel('Y (mm)')
-    ax.set_title(title)
-    ticks = np.linspace(-1 * t_max, t_max, 3, endpoint=True)
-    plt.colorbar(im, orientation='horizontal', format='%.2f', ticks=ticks)
-    return ax
-# -- 
+# ---
+# compute error:
+def kcsd_error(k,ele_x,ele_y):
+    ownk = oKCSD2D(ele_pos, pots, h=k.h, sigma=k.sigma,                                                                                                                                                       
+                xmin=k.xmin, xmax=k.xmax,
+                ymin=k.ymin, ymax=k.ymax,
+                n_src_init=k.n_src_init, src_type=k.src_type, R_init=k.R_init,lambd=k.lambd,own_est=np.array((ele_x,ele_y)),own_src=(k.src_x,k.src_y)) 
+
+    est_pots = ownk.values('POT')
+    error = np.linalg.norm(k.pots-est_pots)**2 + k.lambd*np.linalg.norm(est_pots);
+    return ownk,error;
+# ---
+
+# # --
+# # modifyied from the KCSD tutorial
+# # can be used with: ax=make_plot(k.estm_x, k.estm_y, est_csd[:, :, 0], cmap=cm.bwr) 
+# def make_plot(xx, yy, zz, title='CSD', cmap=cm.bwr):
+#     fig = plt.figure(figsize=(7, 7))
+#     ax = plt.subplot(111)
+#     t_max = np.max(np.abs(zz))
+#     levels = np.linspace(-1 * t_max, t_max, 32)
+#     im = ax.contourf(xx, yy, zz, levels=levels, cmap=cmap)
+#     ax.set_xlabel('X (mm)')
+#     ax.set_ylabel('Y (mm)')
+#     ax.set_title(title)
+#     ticks = np.linspace(-1 * t_max, t_max, 3, endpoint=True)
+#     plt.colorbar(im, orientation='horizontal', format='%.2f', ticks=ticks)
+#     return ax
+# # -- 
 
 # ---- Workflow ----
 
@@ -73,18 +88,35 @@ ele_pos = np.column_stack((ele_x, ele_y))
 # plt.show()
 # --
 
+
 # -- 
 # Read s seconds, compute, and plot the kCSD
 s = 1.0
-pots =read_data_chunk(0.0004,0.0004)
+pots =read_data_chunk(0.0004,10.0)
 k = do_kcsd(ele_pos, pots)
 est_csd = k.values('CSD')
+redk, err = kcsd_error(k,ele_x,ele_y)
+
+# # --
+# f1=plt.figure(1)
+# plt.imshow(np.transpose(est_csd[:,::-1,0]),cmap=cm.bwr,aspect='auto') 
+# plt.show()
+# # --
 
 # --
-f1=plt.figure(1)
-plt.imshow(np.transpose(est_csd[:,::-1,0]),cmap=cm.bwr,aspect='auto') 
-plt.show()
+# save data to plot in gnuplot
+# a=k.estm_x.reshape(k.estm_x.size,1)
+# b=k.estm_y.reshape(k.estm_y.size,1)
+# c=est_csd.reshape(est_csd.size,1)
+# np.savetxt("temp.dat", np.array((a,b,c))[:,:,0].transpose())
+
+# aux=ownk.values('CSD')
+# a=ownk.estm_x.reshape(ownk.estm_x.size,1)
+# b=ownk.estm_y.reshape(ownk.estm_y.size,1)
+# c=aux.reshape(aux.size,1)
+# np.savetxt("temp2.dat", np.array((a,b,c))[:,:,0].transpose())
 # --
+
 
 # --
 # animation, does not work in VS, use terminal
