@@ -1,6 +1,6 @@
 #!/usr/bin/env -S julia --threads 16
 using DelimitedFiles,Multitaper,Plots,DSP;
-
+plotlyjs()
 # -------------------------------------------------------------
 # -------------------------------------------------------------
 # FUNCTIONS:
@@ -153,6 +153,23 @@ function compute_csd(fl)
 
 end
 
+#--------------------------------------------------------------
+# Given the id of a channel, return its index for the csd, if it exists
+#--------------------------------------------------------------
+function channel_idx(chid)
+    i=-1;
+    if chid%4!=0 && chid%4!=1
+        print("Channel not available")
+    else
+        if chid%4==0
+            i= chid/2-1.0
+        else
+            i= (chid-1)/2
+        end
+    end
+    return i
+end
+
 
 #--------------------------------------------------------------
 # Spectral heatmap with Multitaper PSD for specific channels and a time frame
@@ -258,12 +275,12 @@ end
 # -------------------------------------------------------------
 # -------------------------------------------------------------
 # Compute filtered, bipolar and csd 
-bandpass_filter("pre")
-bandpass_filter("post")
-compute_bipolar("pre")
-compute_bipolar("post")
-compute_csd("pre")
-compute_csd("post")
+# bandpass_filter("pre")
+# bandpass_filter("post")
+# compute_bipolar("pre")
+# compute_bipolar("post")
+# compute_csd("pre")
+# compute_csd("post")
 
 
 # --------------------------------------------------------------
@@ -290,7 +307,7 @@ t,chdat=read_channel(id,t0,tf,fl);
 bpfilter = digitalfilter(Bandpass(1.0,300.0; fs=2500),Butterworth(3));
 fil_chdat=filtfilt(bpfilter,chdat)
 
-plotlyjs()
+
 
 plot(t,chdat)
 plot!(t,fil_chdat)
@@ -315,6 +332,14 @@ plot!(fS.f,fS.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
 # Ftest pvalues
 # plot(S.f,S.Fpval,ylim=(0.0,1e-2),lt=:scatter,xlim=(0,100))
 
+t,kcsd=read_channel(id,t0,tf,"kCSD_electrodes_pre");
+t,lcsd=read_channel(channel_idx(id),t0,tf,"csd_pre");
+
+
+plot(t,kcsd)
+plot!(t,lcsd)
+
+plot(kcsd,lcsd,lt=:scatter)
 
 # -------------------------------------------------------------
 # Create a heatmap of the pre data from 200s to 300s using Multitaper:

@@ -8,8 +8,8 @@ import matplotlib.cm as cm
 
 # ---- Functions ----
 class kcsd_opts:
-    def __init__(self, h=1.0,sigma=1.0,xmin=-200.0,xmax=200.0,ymin=-60.0,
-                 ymax=3900.0,n_src_init=2000,src_type='gauss',R_init=40.0,lambd=1e-6,gdx=5.0,gdy=5.0):
+    def __init__(self, h=10.0,sigma=1.0,xmin=-200.0,xmax=200.0,ymin=-60.0,
+                 ymax=3900.0,n_src_init=2000,src_type='gauss',R_init=60.0,lambd=1e-6,gdx=5.0,gdy=5.0):
         self.h=h
         self.sigma=sigma
         self.xmin=xmin
@@ -111,26 +111,38 @@ ele_pos = np.column_stack((ele_x, ele_y))
 # -- 
 # Read s seconds, compute, and plot the kCSD
 s = 1.0
-pots =read_data_chunk(0.0004,0.01)
+pots =read_data_chunk(0.0004,0.0004)
 k = do_kcsd(ele_pos, pots,opts)
 est_csd = k.values('CSD')
-opts.src_x=k.src_x;
-opts.src_y=k.src_y;
+# opts.src_x=k.src_x;
+# opts.src_y=k.src_y;
 redk, err = kcsd_error(ele_pos,pots,ele_x,ele_y,opts)
+err
 # --
+
+# # --
+# f1=plt.figure(1)
+# plt.imshow(np.transpose(est_csd[:,::-1,0]),cmap=cm.bwr,aspect='auto') 
+# plt.show()
+# # --
+
+# opts.h=10.0
+# k = do_kcsd(ele_pos, pots,opts)
+# k.cross_validate(lambdas=np.logspace(-6, -6, num=1), Rs=np.linspace(40, 40, num=1)); k.cv_error
 
 # --
 # CV to obtain reasonable values of R and lambda.
 # It does not compute the error function, but a modified version, a bit heavy for long time series
-k.cross_validate(lambdas=np.logspace(-9, -1, num=9), Rs=np.linspace(10, 100, num=10))
+# k.cross_validate(lambdas=np.logspace(-9, -1, num=9), Rs=np.linspace(10, 100, num=10))
 # Result: R,lambda : 60.0 1e-6
+#
+# Also cross-validate on h:
+# opts.h=100.0
+# k = do_kcsd(ele_pos, pots,opts)
+# k.cross_validate(lambdas=np.logspace(-6, -6, num=1), Rs=np.linspace(40, 40, num=1)); k.cv_error
 # --
 
-# --
-f1=plt.figure(1)
-plt.imshow(np.transpose(est_csd[:,::-1,0]),cmap=cm.bwr,aspect='auto') 
-plt.show()
-# --
+
 
 # --
 def kcsd_validation(Rs,lambdas,k):
@@ -142,11 +154,11 @@ def kcsd_validation(Rs,lambdas,k):
     return kcsd_errors;
 # --
 
-lambdas=np.logspace(-9, -1, num=9);
-Rs=np.linspace(10, 100, num=10);
-errors=kcsd_validation(Rs,lambdas,ele_pos,pots)
-plt.imshow(errors); plt.show();
-# provides minimal values for R=40 and lambda=1e-9 ...but one should take into account the effect of lambda on the calculation of the error
+# lambdas=np.logspace(-9, -1, num=9);
+# Rs=np.linspace(10, 100, num=10);
+# errors=kcsd_validation(Rs,lambdas,ele_pos,pots)
+# plt.imshow(errors); plt.show();
+# # provides minimal values for R=40 and lambda=1e-9 ...but one should take into account the effect of lambda on the calculation of the error
 # --
 
 def export_at_electrodes(ele_pos,pots,ele_x,ele_y,ops):
@@ -177,6 +189,7 @@ def export_at_centers(ele_pos,pots,ops):
         est_csd.tofile(fout,"");
     return est_csd;
 
+# Requires a good amount of free RAM memory (tested in a system with 64Gb)
 csd_electro=export_at_electrodes(ele_pos,pots,ele_x,ele_y,opts)
 csd_centers=export_at_centers(ele_pos,pots,opts)
 
@@ -203,14 +216,6 @@ csd_centers=export_at_centers(ele_pos,pots,opts)
 #
 # plt.show()
 # --
-
-# --
-""""
-Since we cannot load the whole time series we'll have to take chuncks of 100 miliseconds,
-store them in different binaries, and then reorder the chunkcs in a unique big fatty binary file
-"""" 
-
-
 
 # est_csd = k.values('POT')
 # np.savetxt('temp.dat',est_csd[:,:,0])
