@@ -181,7 +181,7 @@ plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 
 Next steps:
 
-1. Look for differences in **time-frequency** accross channels: Kmeans might be missleading (cloud points), should use different tools:
+1. Look for differences in **time-frequency** accross channels
 	- [] Moving window time-freq heatmap to visualize better the differences.
 	- [] Non-parametric analysis
 	- ...
@@ -202,5 +202,5 @@ Next steps:
 5. Other:
 	- [] P-values heatmaps, use 4 colors (3 + white), one for each decade.
 	- [] T-test assumes normalitiy, should check there are no long tails at least.
-	- [] Look for other tests (Giulio send a paper)
+	- [] Permutation tests (Giulio's paper)
 

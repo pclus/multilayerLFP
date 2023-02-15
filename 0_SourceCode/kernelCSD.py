@@ -91,7 +91,7 @@ def validate():
                cverrors)
     return cverrors
     
-def export_at_electrodes(pots,opts):
+def export_at_electrodes(opts):
     pots =read_data(0.0004,900.0)
     redk = oKCSD2D(opts.ele_pos, pots, h=opts.h, sigma=opts.sigma,                                                                                                                                                       
             xmin=opts.xmin, xmax=opts.xmax,
@@ -105,7 +105,7 @@ def export_at_electrodes(pots,opts):
         est_csd.tofile(fout,"");
     return est_csd;
 
-def export_at_centers(pots,opts):
+def export_at_centers(opts):
     pots =read_data(0.0004,900.0)
     loc_y=np.arange(opts.ymin,opts.ymax,ops.gdy)
     loc_x=np.zeros(loc_y.size)
@@ -121,6 +121,7 @@ def export_at_centers(pots,opts):
     return est_csd;
 
 
+
 # validate()
 
 # Requires a good amount of free RAM memory (tested in a system with 64Gb)
@@ -132,11 +133,12 @@ def export_at_centers(pots,opts):
 # -- 
 # # Read s seconds, compute, and plot the kCSD
 # s = 1.0
-# pots =read_data(0.0004,0.0004)
-# k = do_kcsd(ele_pos, pots,opts)
-# est_csd = k.values('CSD')
-# opts.src_x=k.src_x;
-# opts.src_y=k.src_y;
+pots =read_data(0.0004,0.0004)
+k = do_kcsd(pots,opts)
+est_csd = k.values('CSD')
+opts.src_x=k.src_x;
+opts.src_y=k.src_y;
+export_at_electrodes(opts)
 # redk, err = kcsd_error(ele_pos,pots,ele_x,ele_y,opts)
 # err
 # # --
