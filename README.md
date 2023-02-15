@@ -191,7 +191,8 @@ Next steps:
 	- [x] Compare time-snapshots using LaplacianCSD and kCSD.
 	- [x] Authomatize export of the kCSD data to a binary file.
 	- [x] Compare results from frequency analysis.
-	- [ ] Fix the pass of the arguments in the code. 
+	- [x] Fix the pass of the arguments in the code. 
+	- [ ] Fix the directories to load/save data.
 	
 3. Band-pass filter or freq. bands comparison 
 	- [] Check phase-amplitude relation between $\alpha$ and $\gamma$
