@@ -339,20 +339,32 @@ t,lcsd=read_channel(channel_idx(id),t0,tf,"csd_pre");
 plot(t,kcsd)
 plot!(t,lcsd)
 
-plot(kcsd,lcsd,lt=:scatter)
+plot(kcsd[1:10000],lcsd[1:10000],lt=:scatter,ms=2,msw=0,lw=0)
+cor(kcsd[1:10000],lcsd[1:10000])
+
+S1  = multispec(kcsd, dt=dt, NW=NW, K=K,jk=true,Ftest=true, a_weight=false);
+S2  = multispec(lcsd, dt=dt, NW=NW, K=K,jk=true,Ftest=true, a_weight=false);
+
+plot(S1.f,S1.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
+plot!(S2.f,S2.S,xlim=(0,200),ylim=(1e-18,1e-15),lw=1.0,yaxis=:log)
+# -------------------------------------------------------------
+# -------------------------------------------------------------
+# -------------------------------------------------------------
 
 # -------------------------------------------------------------
 # Create a heatmap of the pre data from 200s to 300s using Multitaper:
 w,lfp=heatmapMT(200.0,300.0,"pre",1:384);
 w,csd=heatmapMT(200.0,300.0,"csd_pre",1:190);
 w,bip=heatmapMT(200.0,300.0,"bipolar_pre",1:376);
+w,kcsd=heatmapMT(200.0,300.0,"kCSD_electrodes_pre",1:384);
 
-
-# heatmap(w,1:384,lfp')
+gr()
+heatmap(w,1:384,kcsd')
 
 writedlm("../4_outputs/lfp.dat",lfp'," ");
 writedlm("../4_outputs/csd.dat",csd'," ");
 writedlm("../4_outputs/bip.dat",bip'," ");
+writedlm("../4_outputs/kcsd.dat",kcsd'," ");
 # -------------------------------------------------------------
 
 # -------------------------------------------------------------

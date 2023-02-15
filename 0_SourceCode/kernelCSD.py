@@ -69,7 +69,7 @@ def kcsd_error(ele_pos,pots,ele_x,ele_y,opts):
                 own_est=np.array((ele_x,ele_y)),own_src=(opts.src_x,opts.src_y)) 
 
     est_pots = ownk.values('POT')
-    error = np.linalg.norm(k.pots-est_pots)**2 + opts.lambd*np.linalg.norm(est_pots);
+    error = np.linalg.norm(ownk.pots-est_pots)**2 #+ opts.lambd*np.linalg.norm(est_pots)**2;
     return ownk,error;
 # ---
 
@@ -114,8 +114,8 @@ s = 1.0
 pots =read_data_chunk(0.0004,0.0004)
 k = do_kcsd(ele_pos, pots,opts)
 est_csd = k.values('CSD')
-# opts.src_x=k.src_x;
-# opts.src_y=k.src_y;
+opts.src_x=k.src_x;
+opts.src_y=k.src_y;
 redk, err = kcsd_error(ele_pos,pots,ele_x,ele_y,opts)
 err
 # --
@@ -133,33 +133,37 @@ err
 # --
 # CV to obtain reasonable values of R and lambda.
 # It does not compute the error function, but a modified version, a bit heavy for long time series
-# k.cross_validate(lambdas=np.logspace(-9, -1, num=9), Rs=np.linspace(10, 100, num=10))
+k.cross_validate(lambdas=np.logspace(-9, -1, num=9), Rs=np.linspace(10, 100, num=10))
 # Result: R,lambda : 60.0 1e-6
 #
 # Also cross-validate on h:
 # opts.h=100.0
 # k = do_kcsd(ele_pos, pots,opts)
 # k.cross_validate(lambdas=np.logspace(-6, -6, num=1), Rs=np.linspace(40, 40, num=1)); k.cv_error
+
+# k.L_curve(lambdas=lambdas, Rs=Rs) # just gives extreme...
 # --
 
 
+# # -- My own validation (faster than CV, and more "transparent"),
+# # but always provides minimal values for lambda at the extremes (i.e., overfitting).
+# # CV should be used instead.
+# def kcsd_validation(ele_pos,pots,ele_x,ele_y,opts,Rs,lambdas):
+#     kcsd_errors = np.zeros([Rs.size,lambdas.size])
+#     for i,R in enumerate(Rs):
+#         for j,lambd in enumerate(lambdas):
+#             opts.R_init=R
+#             opts.lambd=lambd
+#             kred, err = kcsd_error(ele_pos,pots,ele_x,ele_y,opts)
+#             kcsd_errors[i,j] = err;
+#     return kcsd_errors;
+# # --
 
-# --
-def kcsd_validation(Rs,lambdas,k):
-    kcsd_errors = np.zeros([Rs.size,lambdas.size])
-    for i,R in enumerate(Rs):
-        for j,lambd in enumerate(lambdas):
-            kred, err = kcsd_error(k,ele_x,ele_y,R,lambd)
-            kcsd_errors[i,j] = err;
-    return kcsd_errors;
-# --
-
-# lambdas=np.logspace(-9, -1, num=9);
+# lambdas=np.logspace(-20, -1, num=10);
 # Rs=np.linspace(10, 100, num=10);
-# errors=kcsd_validation(Rs,lambdas,ele_pos,pots)
+# errors=kcsd_validation(ele_pos,pots,ele_x,ele_y,opts,Rs,lambdas)
 # plt.imshow(errors); plt.show();
-# # provides minimal values for R=40 and lambda=1e-9 ...but one should take into account the effect of lambda on the calculation of the error
-# --
+# #--
 
 def export_at_electrodes(ele_pos,pots,ele_x,ele_y,ops):
     pots =read_data_chunk(0.0004,900.0)

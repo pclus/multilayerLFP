@@ -3,15 +3,13 @@
 ## Index
 <!-- vim-markdown-toc GFM -->
 
-- [Analysis of LFP from UPO-tACS Dataset](#analysis-of-lfp-from-upo-tacs-dataset)
-	- [Index](#index)
-	- [Processing of the `.mat` files](#processing-of-the-mat-files)
-		- [Local Field Potential files](#local-field-potential-files)
-		- [Reading binary files with C](#reading-binary-files-with-c)
-		- [Movement data](#movement-data)
-	- [Data Overview](#data-overview)
-	- [Bandpass filter, bipolar, and CSD](#bandpass-filter-bipolar-and-csd)
-	- [Frequency analysis](#frequency-analysis)
+* [Processing of the `.mat` files](#processing-of-the-mat-files)
+	* [Local Field Potential files](#local-field-potential-files)
+	* [Reading binary files with C](#reading-binary-files-with-c)
+	* [Movement data](#movement-data)
+* [Data Overview](#data-overview)
+* [Bandpass filter, bipolar, and CSD](#bandpass-filter-bipolar-and-csd)
+* [Frequency analysis](#frequency-analysis)
 
 <!-- vim-markdown-toc -->
 
@@ -188,11 +186,12 @@ Next steps:
 	- [] Non-parametric analysis
 	- ...
 2. [x] CSD using k-density method. 
-	- [] Try bandpassing the signal to reduce noise
-	- [] Cross-validate for proper parameters.
+	- [x] Try bandpassing the signal to reduce noise
+	- [ ] Cross-validate for proper parameters.
 	- [x] Compare time-snapshots using LaplacianCSD and kCSD.
-	- [] Authomatize export of the kCSD data to a binary file.
-	- [] Compare results from frequency analysis.
+	- [x] Authomatize export of the kCSD data to a binary file.
+	- [x] Compare results from frequency analysis.
+	- [ ] Fix the pass of the arguments in the code. 
 	
 3. Band-pass filter or freq. bands comparison 
 	- [] Check phase-amplitude relation between $\alpha$ and $\gamma$
