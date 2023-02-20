@@ -138,25 +138,37 @@ def export_at_centers(opts):
 
 # validate()
 
-# Requires a good amount of free RAM memory (tested in a system with 64Gb)
-opts=kcsd_opts()
-pots =read_data(100.0,101.0)
-k = do_kcsd(pots,opts)
-opts.src_x = k.src_x
-opts.src_y = k.src_y # this should be made differently
-csd_electro=export_at_electrodes(opts)
+# -----------------------------------------------------
+def process_data():
+    # Requires a good amount of free RAM memory (tested in a system with 64Gb)
+    opts=kcsd_opts()
+    pots =read_data(100.0,101.0)
+    k = do_kcsd(pots,opts)
+    opts.src_x = k.src_x
+    opts.src_y = k.src_y # this should be made differently
+    csd_electro=export_at_electrodes(opts)
+    
+    # [cleanup] this is problematic...since opts is modified by the remove_electrodes
+    opts=kcsd_opts()
+    pots =read_data(100.0,101.0)
+    k = do_kcsd(pots,opts)
+    opts.src_x = k.src_x
+    opts.src_y = k.src_y # this should be made differently
+    csd_centers=export_at_centers(opts)
+    return ;
 
-# this is problematic...since opts is modified by the remove_electrodes
-opts=kcsd_opts()
-pots =read_data(100.0,101.0)
-k = do_kcsd(pots,opts)
-opts.src_x = k.src_x
-opts.src_y = k.src_y # this should be made differently
-csd_centers=export_at_centers(opts)
+# needs further work, it is very slow
+def animation():
+    pots=read_data(100.0,110.0);
+    opts=kcsd_opts();
+    k = do_kcsd(pots,opts)
+    est_csd = k.values('CSD')
+    for i in range(2500):
+        plt.imshow(np.transpose(est_csd[:,::-1,i]),cmap=cm.bwr,aspect='auto') 
+        plt.pause(0.0001)
 
-# pots =read_data(100.0,100.0004)
-# k = do_kcsd(pots,opts)
-# est_csd = k.values('CSD')
+    plt.show()
+    return ;
 
 
 # -- 
