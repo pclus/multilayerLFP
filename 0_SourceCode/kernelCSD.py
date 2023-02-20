@@ -37,7 +37,7 @@ def read_data(t0,tf):
     n=384
     m = 2250000; 
     data=np.zeros((n,mm))
-    with open("/home/pclusella/Documents/Data/UPO-tACs/1_Raw/filtered_pre.bin", "rb") as fin:
+    with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/filtered_pre.bin", "rb") as fin:
         data[0,:]=np.fromfile(fin, dtype=np.double, count=mm, sep='',offset=8*m0)
         for i in range(1,n):
             data[i,:]=np.fromfile(fin, dtype=np.double, count=mm, sep='', offset=8*(m-mm))
@@ -108,7 +108,7 @@ def export_at_electrodes(opts):
             own_est=np.array((opts.ele_x,opts.ele_y)),own_src=(opts.src_x,opts.src_y)) 
     est_csd = redk.values('CSD')
     # est_pot = redk.values('POT') # can export estimated potentials
-    with open("/home/pclusella/Documents/Data/UPO-tACs/1_Raw/kCSD_electrodes_pre.bin", "wb") as fout:
+    with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/kCSD_electrodes_pre.bin", "wb") as fout:
         est_csd.tofile(fout,"");
     return est_csd;
 
@@ -124,7 +124,7 @@ def export_at_centers(opts):
             R_init=opts.R_init,lambd=opts.lambd,own_est=np.array((loc_x,loc_y)),own_src=(opts.src_x,opts.src_y)) 
     est_csd = redk.values('CSD')
     # est_pot = redk.values('POT') # can export estimated potentials
-    with open("/home/pclusella/Documents/Data/UPO-tACs/1_Raw/kCSD_centers_pre.bin", "wb") as fout:
+    with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/kCSD_centers_pre.bin", "wb") as fout:
         est_csd.tofile(fout,"");
     return est_csd;
 

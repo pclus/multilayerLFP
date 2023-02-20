@@ -15,7 +15,7 @@ function read_channel(id, t0, tf, fl) # Equivalent to the read_binary.c code
 
 
     data = zeros(m)
-    fin = open("../1_Raw/" * fl * ".bin", "r")
+    fin = open("../1_data/" * fl * ".bin", "r")
     for i in 1:id
         read!(fin, data)
     end
@@ -43,7 +43,7 @@ function bandpass_filter(fl)
     n = 384
 
     bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=2500), Butterworth(3))
-    fout = open("../1_Raw/filtered_" * fl * ".bin", "w")
+    fout = open("../1_data/filtered_" * fl * ".bin", "w")
 
     for id in 1:384
         t, ch = read_channel(id, t0, tf, fl)
@@ -65,7 +65,7 @@ function compute_bipolar(fl)
     tf = 900.0
     n = 384
 
-    fout = open("../1_Raw/bipolar_" * fl * ".bin", "w")
+    fout = open("../1_data/bipolar_" * fl * ".bin", "w")
 
     fl = "filtered_" * fl
     t, prev_a = read_channel(1, t0, tf, fl)
@@ -122,7 +122,7 @@ function compute_csd(fl)
     tf = 900.0
     n = 384
 
-    fout = open("../1_Raw/csd_" * fl * ".bin", "w")
+    fout = open("../1_data/csd_" * fl * ".bin", "w")
     fl = "filtered_" * fl
 
     t, ch_5 = read_channel(1, t0, tf, fl)
@@ -264,7 +264,7 @@ end
 # notice that this function assumes Δt=10
 #--------------------------------------------------------------
 function movfilter(t, tfhm, fl)
-    mov_pre = readdlm("../1_Raw/mov_" * fl * ".dat", ' ')
+    mov_pre = readdlm("../1_data/mov_" * fl * ".dat", ' ')
     Δt = 10.0
     mov_indx = Int.(floor.(mov_pre ./ Δt) * Δt .+ 5)
     indx = t .∈ [mov_indx]

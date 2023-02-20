@@ -19,11 +19,11 @@
 ### Local Field Potential files
 
 The "pre" and "post" data in the Matlab file have been transcribed to binary files for convenience.
-The "pre" data has been stored in `1_Raw/pre.bin`, and the "post" data has been stored in `1_Raw/pre.bin`.
+The "pre" data has been stored in `1_data/pre.bin`, and the "post" data has been stored in `1_data/pre.bin`.
 These files have been created by running this code in Matlab:
 
 ```
-mf=matfile('1_Raw/Suj9.mat');
+mf=matfile('1_data/raw/Suj9.mat');
 
 pre=mf.Suj9(1,1);
 fid=fopen("pre.bin","w"); fwrite(fid,pre{1}(384:-1:1,:)','double'); fclose(fid)
@@ -56,7 +56,7 @@ The data must be stored in the binary `<infile>`.
 For example:
 
 ```
-./readbin 1_Raw/pre.bin t2.dat 350 200 300
+./readbin 1_data/pre.bin t2.dat 350 200 300
 ```
 
 stores the time series of channel 350 from 200s to 300s to the t2.dat file.
@@ -66,12 +66,12 @@ stores the time series of channel 350 from 200s to 300s to the t2.dat file.
 
 The movement can be converted to `.dat` file in octave:
 ```
-load('mov.mat');
+load('raw/mov.mat');
 dlmwrite('mov_pre.dat',mov{1},' ')
 dlmwrite('mov_dur.dat',mov{2},' ')
 dlmwrite('mov_post.dat',mov{3},' ')
 ```
-This is done only once, and the results are stored in the `1_Raw` folder.
+This is done only once, and the results are stored in the `1_data` folder.
 
 
 ## Data Overview
@@ -88,7 +88,7 @@ A quick way to overview the data from different channels. First we generate the 
 ```
 for i in {55,56,57,58,59};
 do 
-	./readbin 1_Raw/pre.bin t${i}.dat ${i} 0.0004 900.0; 
+	./readbin 1_data/pre.bin t${i}.dat ${i} 0.0004 900.0; 
 done
 ```
 
@@ -109,7 +109,7 @@ Also, we can generate a statistical summary in gnuplot:
 ```
 set print 'stats_filtered_pre.dat'
 do for[k=1:384]{
-	cmd="./readbin 1_Raw/filtered_pre.bin temp.dat ".k." 0.0004 900.0"
+	cmd="./readbin 1_data/filtered_pre.bin temp.dat ".k." 0.0004 900.0"
 	system(cmd)
 	stats 'temp.dat' nooutput
 	print k,STATS_mean_y,STATS_stddev_y
@@ -182,7 +182,7 @@ In the case of segments of 10 seconds, the results outputted by `writedlm` can b
 set cbrange[1e-17:5e-15]
 set log zcb
 df=0.0999960001599936
-plot 'tfhm100.dat' mat u (5+10*$1):(df*$2):3 w ima, '../../1_Raw/mov_pre.dat' u 1:(150)
+plot 'tfhm100.dat' mat u (5+10*$1):(df*$2):3 w ima, '../../1_data/mov_pre.dat' u 1:(150)
 ```
 
 Then, we can use the function `movfilter` to remove the data segments that
