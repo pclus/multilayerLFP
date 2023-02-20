@@ -186,14 +186,11 @@ Next steps:
 	- [] Non-parametric analysis
 	- ...
 2. [x] CSD using k-density method. 
-	- [x] Try bandpassing the signal to reduce noise
 	- [ ] Cross-validate for proper parameters.
-	- [x] Compare time-snapshots using LaplacianCSD and kCSD.
-	- [x] Authomatize export of the kCSD data to a binary file.
-	- [x] Compare results from frequency analysis.
-	- [x] Fix the pass of the arguments in the code. 
-	- [ ] Fix the directories to load/save data.
-	
+	- [ ] Compare correlations of time-snapshots using LaplacianCSD and kCSD.
+	- [ ] Further fix the pass of the arguments in the kcsd code (src_x and src_y). 
+	- [ ] Fix the authomatic paths to directories to load/save data.
+	- [ ] Remove broken electrodes
 3. Band-pass filter or freq. bands comparison 
 	- [] Check phase-amplitude relation between $\alpha$ and $\gamma$
 4. Ask UPO:
