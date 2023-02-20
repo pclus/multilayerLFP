@@ -83,6 +83,40 @@ If `pre1.dat` contains all the 900s of a channel, then in gnuplot one can use:
 plot 'mov_pre.dat' u 1:(-1e-5):(0):(2e-5) w vectors nohead lc 'gray' , 'pre1.dat' ev 10 w l lc 1 lw 1
 ```
 
+A quick way to overview the data from different channels. First we generate the data from the binaries:
+
+```
+for i in {55,56,57,58,59};
+do 
+	./readbin 1_Raw/pre.bin t${i}.dat ${i} 0.0004 900.0; 
+done
+```
+
+Then we plot in gnuplot:
+
+```
+j=1;
+set multiplot layout 3,2;
+do for[k=55:59]{
+	plot 't'.k.'.dat' ev 10 w l lw 1 lc j t 't'.k;
+	j=j+1
+};
+unset multiplot;
+```
+
+Also, we can generate a statistical summary in gnuplot:
+
+```
+set print 'stats_filtered_pre.dat'
+do for[k=1:384]{
+	cmd="./readbin 1_Raw/filtered_pre.bin temp.dat ".k." 0.0004 900.0"
+	system(cmd)
+	stats 'temp.dat' nooutput
+	print k,STATS_mean_y,STATS_stddev_y
+}
+set print
+```
+
 ## Bandpass filter, bipolar, and CSD
 
 The Julia code `analysis.jl` contains the functions `bandpass_filter()`, `compute_bipolar()`, and `compute_csd()`
@@ -110,7 +144,7 @@ channel is given in the following table:
 
 Alternatively we also use the [kernel-CSD](https://doi.org/10.1162/neco_a_00236).
 For this we use the [Python library](http://biorxiv.org/lookup/doi/10.1101/708511) created by the same group. This method has several advantages (and some constrains):
-- It works with arbitrary positions of the electrodes.
+- It works with arbitrary positions of the electrodes, thus we can also exclude broken electrodes.
 - It is more robust to measurement noise and broken electrodes.
 - Assumes arbitrary number of sources with Gaussian profiles.
 - On the downside, has many parameters to tune, which might cause artifacts if not set properly.
@@ -181,6 +215,9 @@ plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 
 Next steps:
 
+0. Code cleaning:
+	- [ ] Create a package for julia
+	- [ ] Make indices always go from 0 to 383
 1. Look for differences in **time-frequency** accross channels
 	- [] Moving window time-freq heatmap to visualize better the differences.
 	- [] Non-parametric analysis
@@ -190,7 +227,7 @@ Next steps:
 	- [ ] Compare correlations of time-snapshots using LaplacianCSD and kCSD.
 	- [ ] Further fix the pass of the arguments in the kcsd code (src_x and src_y). 
 	- [ ] Fix the authomatic paths to directories to load/save data.
-	- [ ] Remove broken electrodes
+	- [x] Remove broken electrodes
 3. Band-pass filter or freq. bands comparison 
 	- [] Check phase-amplitude relation between $\alpha$ and $\gamma$
 4. Ask UPO:

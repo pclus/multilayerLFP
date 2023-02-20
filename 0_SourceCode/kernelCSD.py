@@ -43,6 +43,12 @@ def read_data(t0,tf):
             data[i,:]=np.fromfile(fin, dtype=np.double, count=mm, sep='', offset=8*(m-mm))
     return data;
 
+# Remove broken electrodes
+def remove_broken(pots,opts):
+    rmv=np.array([56,135,191,198,325])
+    pots=np.delete(pots,rmv,0)
+    opts.ele_pos=np.delete(opts.ele_pos,rmv,0)
+    return pots,opts;
 
 # Compute 2D kCSD in the entire space
 def do_kcsd(pots,opts):
@@ -93,6 +99,7 @@ def validate():
     
 def export_at_electrodes(opts):
     pots =read_data(0.0004,900.0)
+    pots,opts = remove_broken(pots,opts)
     redk = oKCSD2D(opts.ele_pos, pots, h=opts.h, sigma=opts.sigma,                                                                                                                                                       
             xmin=opts.xmin, xmax=opts.xmax,
             ymin=opts.ymin, ymax=opts.ymax,
@@ -107,7 +114,8 @@ def export_at_electrodes(opts):
 
 def export_at_centers(opts):
     pots =read_data(0.0004,900.0)
-    loc_y=np.arange(opts.ymin,opts.ymax,opts.gdy)
+    pots,opts = remove_broken(pots,opts)
+    loc_y=np.arange(0.0,3840.0,10)
     loc_x=np.zeros(loc_y.size)
     redk = oKCSD2D(opts.ele_pos, pots, h=opts.h, sigma=opts.sigma,                                                                                                                                                       
             xmin=opts.xmin, xmax=opts.xmax,
@@ -121,22 +129,33 @@ def export_at_centers(opts):
     return est_csd;
 
 
+# opts=kcsd_opts()
+# pots =read_data(100.0,101.0)
+# print(pots.shape,opts.ele_pos.shape)
+# pots,opts = remove_broken(pots,opts)
+# print(pots.shape,opts.ele_pos.shape)
+
 
 # validate()
 
 # Requires a good amount of free RAM memory (tested in a system with 64Gb)
 opts=kcsd_opts()
-pots =read_data(100.0,100.0004)
+pots =read_data(100.0,101.0)
 k = do_kcsd(pots,opts)
 opts.src_x = k.src_x
 opts.src_y = k.src_y # this should be made differently
-
 csd_electro=export_at_electrodes(opts)
+
+# this is problematic...since opts is modified by the remove_electrodes
+opts=kcsd_opts()
+pots =read_data(100.0,101.0)
+k = do_kcsd(pots,opts)
+opts.src_x = k.src_x
+opts.src_y = k.src_y # this should be made differently
 csd_centers=export_at_centers(opts)
 
-
-pots =read_data(100.0,100.0004)
-k = do_kcsd(pots,opts)
+# pots =read_data(100.0,100.0004)
+# k = do_kcsd(pots,opts)
 # est_csd = k.values('CSD')
 
 
