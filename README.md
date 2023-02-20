@@ -45,7 +45,7 @@ The Julia function `read_channel()` in `analysis.jl` takes care of this (see lat
 However we include an additional C function that can be used directly
 
 The function `readbin` can be used to read such binary files
-Source code is stored in the `0_SourceCode` directory.
+Source code is stored in the `0_codes` directory.
 The usage of the function is 
 
 ```
