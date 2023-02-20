@@ -136,8 +136,6 @@ def export_at_centers(opts):
 # print(pots.shape,opts.ele_pos.shape)
 
 
-# validate()
-
 # -----------------------------------------------------
 def process_data():
     # Requires a good amount of free RAM memory (tested in a system with 64Gb)
@@ -170,6 +168,8 @@ def animation():
     plt.show()
     return ;
 
+
+validate()
 
 # -- 
 # # Read s seconds, compute, and plot the kCSD
