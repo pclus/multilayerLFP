@@ -38,7 +38,7 @@ def read_data(t0,tf):
     m = 2250000; 
     data=np.zeros((n,mm))
     with open("/home/pclusella/Documents/Data/UPO-tACs/1_Raw/filtered_pre.bin", "rb") as fin:
-        data[0,:]=np.fromfile(fin, dtype=np.double, count=mm, sep='',offset=m0)
+        data[0,:]=np.fromfile(fin, dtype=np.double, count=mm, sep='',offset=8*m0)
         for i in range(1,n):
             data[i,:]=np.fromfile(fin, dtype=np.double, count=mm, sep='', offset=8*(m-mm))
     return data;
@@ -125,20 +125,25 @@ def export_at_centers(opts):
 # validate()
 
 # Requires a good amount of free RAM memory (tested in a system with 64Gb)
-# csd_electro=export_at_electrodes(pots,opts)
-# csd_centers=export_at_centers(pots,opts)
+opts=kcsd_opts()
+csd_electro=export_at_electrodes(opts)
+csd_centers=export_at_centers(opts)
 
+
+# pots =read_data(100.0,100.0004)
+# k = do_kcsd(pots,opts)
+# est_csd = k.values('CSD')
 
 
 # -- 
 # # Read s seconds, compute, and plot the kCSD
 # s = 1.0
-pots =read_data(0.0004,0.0004)
-k = do_kcsd(pots,opts)
-est_csd = k.values('CSD')
-opts.src_x=k.src_x;
-opts.src_y=k.src_y;
-export_at_electrodes(opts)
+# pots =read_data(0.0004,0.0004)
+# k = do_kcsd(pots,opts)
+# est_csd = k.values('CSD')
+# opts.src_x=k.src_x;
+# opts.src_y=k.src_y;
+# export_at_electrodes(opts)
 # redk, err = kcsd_error(ele_pos,pots,ele_x,ele_y,opts)
 # err
 # # --
