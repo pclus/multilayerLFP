@@ -107,7 +107,7 @@ def export_at_electrodes(opts):
 
 def export_at_centers(opts):
     pots =read_data(0.0004,900.0)
-    loc_y=np.arange(opts.ymin,opts.ymax,ops.gdy)
+    loc_y=np.arange(opts.ymin,opts.ymax,opts.gdy)
     loc_x=np.zeros(loc_y.size)
     redk = oKCSD2D(opts.ele_pos, pots, h=opts.h, sigma=opts.sigma,                                                                                                                                                       
             xmin=opts.xmin, xmax=opts.xmax,
@@ -126,12 +126,17 @@ def export_at_centers(opts):
 
 # Requires a good amount of free RAM memory (tested in a system with 64Gb)
 opts=kcsd_opts()
+pots =read_data(100.0,100.0004)
+k = do_kcsd(pots,opts)
+opts.src_x = k.src_x
+opts.src_y = k.src_y # this should be made differently
+
 csd_electro=export_at_electrodes(opts)
 csd_centers=export_at_centers(opts)
 
 
-# pots =read_data(100.0,100.0004)
-# k = do_kcsd(pots,opts)
+pots =read_data(100.0,100.0004)
+k = do_kcsd(pots,opts)
 # est_csd = k.values('CSD')
 
 
