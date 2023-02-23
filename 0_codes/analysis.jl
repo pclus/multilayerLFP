@@ -6,8 +6,6 @@ using NeuropixelAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics;
 # plotlyjs()
 
-# Comparison between raw and filtered data----------------------
-
 
 # Load time series for a specific channel from second 200 to 300:
 t0 = 100;
@@ -16,16 +14,8 @@ id = 196;
 fl = "pre"
 t, chdat = read_channel(id, t0, tf, fl);
 
-# jd=Int((id-2)/2) # the formula changes if id is even
-# t,chcsd=read_channel(jd,t0,tf,"csd_pre")
-
-# Bandpass filter
-bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=2500), Butterworth(3));
-fil_chdat = filtfilt(bpfilter, chdat)
-
-
 plot(t, chdat)
-plot!(t, fil_chdat)
+
 
 
 # Compute PSD using Multitaper PSD ----------------------------
@@ -74,10 +64,12 @@ w, bip = heatmapMT(200.0, 300.0, "bipolar_pre", 1:376);
 w, kcsd = heatmapMT(200.0, 300.0, "kCSD_electrodes_pre", 1:384);
 w, kcsd = heatmapMT(200.0, 300.0, "kCSD_centers_pre", 1:384);
 
+w, lfp_post = heatmapMT(200.0, 300.0, "filtered_post", 1:384);
 # gr()
 # heatmap(w,1:384,kcsd')
 
 writedlm("../4_outputs/lfp.dat", lfp', " ");
+writedlm("../4_outputs/lfp.dat", lfp_post', " ");
 writedlm("../4_outputs/csd.dat", csd', " ");
 writedlm("../4_outputs/bip.dat", bip', " ");
 writedlm("../4_outputs/kcsd_cent.dat", kcsd', " ");
@@ -143,13 +135,13 @@ Threads.@threads for id in 1:n
     flush(stdout)
 
     # Pre
-    t, f, tfhm = timefreq(id, "pre")
+    t, f, tfhm = timefreq(id, "filtered_pre")
     idx, f_pre = movfilter(t, tfhm, "pre")
     psd_mean_tfhm_pre[id, :] = mean(f_pre, dims=2)
     psd_std_tfhm_pre[id, :] = std(f_pre, dims=2)
 
     # Post
-    t, f, tfhm = timefreq(id, "post")
+    t, f, tfhm = timefreq(id, "filtered_post")
     idx, f_post = movfilter(t, tfhm, "post")
     psd_mean_tfhm_post[id, :] = mean(f_post, dims=2)
     psd_std_tfhm_post[id, :] = std(f_post, dims=2)
@@ -161,10 +153,10 @@ Threads.@threads for id in 1:n
     end
 end
 
-writedlm("../4_outputs/psd_mean_tfhm_post.dat", psd_mean_tfhm_pre', ' ');
-writedlm("../4_outputs/psd_std_tfhm_post.dat", psd_std_tfhm_pre', ' ');
-writedlm("../4_outputs/psd_mean_tfhm_pre.dat", psd_mean_tfhm_post', ' ');
-writedlm("../4_outputs/psd_std_tfhm_pre.dat", psd_std_tfhm_post', ' ');
+writedlm("../4_outputs/psd_mean_tfhm_post.dat", psd_mean_tfhm_post', ' ');
+writedlm("../4_outputs/psd_std_tfhm_post.dat", psd_std_tfhm_post', ' ');
+writedlm("../4_outputs/psd_mean_tfhm_pre.dat", psd_mean_tfhm_pre', ' ');
+writedlm("../4_outputs/psd_std_tfhm_pre.dat", psd_std_tfhm_pre', ' ');
 writedlm("../4_outputs/psd_pvals.dat", pvals_tfhm', ' ');
 writedlm("../4_outputs/psd_pvals_uneq.dat", pvals_uneq_tfhm', ' ');
 writedlm("../4_outputs/psd_mean_tfhm_difference.dat", (psd_mean_tfhm_post - psd_mean_tfhm_pre)', ' ');

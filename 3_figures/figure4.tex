@@ -85,7 +85,7 @@
 	set cbrange[-1e-16:1e-16]
 	set cblabel '\large Power difference'
 	set pale @DIVERGING1 negative
-	plot 'psd_mean_tfhm_difference.dat' matrix u (df*$2):1:3 w ima
+	plot 'psd_mean_tfhm_difference.dat' matrix u (df*$2):1:($3) w ima
 	# ----------------------------------------------------------------
 
 	# ----------------------------------------------------------------
@@ -96,7 +96,7 @@
 	set log zcb
 
 	#OCEAN = "defined (0.0 '#090979', 0.001 '#090979', 0.001 '#00d4ff',  0.099 '#00d4ff', 0.099 '#ffffff', 0.1 '#ffffff' )"
-	OCEAN = "defined ( 0.0 '#090979', 0.25 '#090979', 0.25 '#00d4ff',  0.75 '#00d4ff', 0.75 '#ffffff', 1.0 '#ffffff' )"
+	OCEAN = "defined ( 0.0 '#090979', 0.25 '#090979', 0.25 '#5684f0', 0.50 '#5684f0', 0.50 '#00d4ff'  ,0.75 '#00d4ff', 0.75 '#ffffff', 1.0 '#ffffff' )"
 	set pale @OCEAN positive
 	plot 'psd_pvals_uneq.dat' matrix u (df*$2):1:3 w ima
 	# ----------------------------------------------------------------

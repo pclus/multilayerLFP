@@ -169,7 +169,7 @@ def animation():
     return ;
 
 
-#validate()
+validate()
 
 # -- 
 # # Read s seconds, compute, and plot the kCSD
