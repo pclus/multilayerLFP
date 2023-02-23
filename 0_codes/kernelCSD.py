@@ -87,7 +87,7 @@ def validate():
     lambdas=np.logspace(-12, -1, num=12)
     Rs=np.linspace(10, 100, num=10)
     hs=np.arange(1,101,10)
-    cverrors=np.zeros([lambdas.size,Rs.size,hs.size])
+    cverrors=np.zeros([Rs.size,lambdas.size,hs.size])
     for i,h in enumerate(hs):
         opts.h=h
         k = do_kcsd(pots,opts)
