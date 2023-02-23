@@ -29,7 +29,7 @@ class kcsd_opts:
         self.ele_pos = np.column_stack((self.ele_x, self.ele_y))
 
 # Read the bindary file "pre.bin"
-def read_data(t0,tf):
+def read_data(t0,tf,fl):
     dt=1/2500.0
     m0=int(np.floor(t0/dt)-1)
     mf=int(np.ceil(tf/dt))
@@ -37,7 +37,7 @@ def read_data(t0,tf):
     n=384
     m = 2250000; 
     data=np.zeros((n,mm))
-    with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/filtered_pre.bin", "rb") as fin:
+    with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/filtered_"+fl+".bin", "rb") as fin:
         data[0,:]=np.fromfile(fin, dtype=np.double, count=mm, sep='',offset=8*m0)
         for i in range(1,n):
             data[i,:]=np.fromfile(fin, dtype=np.double, count=mm, sep='', offset=8*(m-mm))
@@ -83,7 +83,7 @@ def kcsd_error(pots,opts):
 # A bit heavy for long time series
 def validate():
     opts=kcsd_opts()
-    pots =read_data(100.0,100.0)
+    pots =read_data(100.0,100.0,"pre")
     lambdas=np.logspace(-12, -1, num=12)
     Rs=np.linspace(10, 100, num=10)
     hs=np.arange(1,101,10)
@@ -97,8 +97,8 @@ def validate():
                cverrors)
     return cverrors
     
-def export_at_electrodes(opts):
-    pots =read_data(0.0004,900.0)
+def export_at_electrodes(opts,fl):
+    pots =read_data(0.0004,900.0,fl)
     pots,opts = remove_broken(pots,opts)
     redk = oKCSD2D(opts.ele_pos, pots, h=opts.h, sigma=opts.sigma,                                                                                                                                                       
             xmin=opts.xmin, xmax=opts.xmax,
@@ -108,12 +108,12 @@ def export_at_electrodes(opts):
             own_est=np.array((opts.ele_x,opts.ele_y)),own_src=(opts.src_x,opts.src_y)) 
     est_csd = redk.values('CSD')
     # est_pot = redk.values('POT') # can export estimated potentials
-    with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/kCSD_electrodes_pre.bin", "wb") as fout:
+    with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/kCSD_electrodes_"+fl+".bin", "wb") as fout:
         est_csd.tofile(fout,"");
     return est_csd;
 
-def export_at_centers(opts):
-    pots =read_data(0.0004,900.0)
+def export_at_centers(opts,fl):
+    pots =read_data(0.0004,900.0,fl)
     pots,opts = remove_broken(pots,opts)
     loc_y=np.arange(0.0,3840.0,10)
     loc_x=np.zeros(loc_y.size)
@@ -124,7 +124,7 @@ def export_at_centers(opts):
             R_init=opts.R_init,lambd=opts.lambd,own_est=np.array((loc_x,loc_y)),own_src=(opts.src_x,opts.src_y)) 
     est_csd = redk.values('CSD')
     # est_pot = redk.values('POT') # can export estimated potentials
-    with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/kCSD_centers_pre.bin", "wb") as fout:
+    with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/kCSD_centers_"+fl+".bin", "wb") as fout:
         est_csd.tofile(fout,"");
     return est_csd;
 
@@ -137,22 +137,22 @@ def export_at_centers(opts):
 
 
 # -----------------------------------------------------
-def process_data():
+def process_data(fl):
     # Requires a good amount of free RAM memory (tested in a system with 64Gb)
     opts=kcsd_opts()
-    pots =read_data(100.0,101.0)
+    pots =read_data(100.0,101.0,fl)
     k = do_kcsd(pots,opts)
     opts.src_x = k.src_x
     opts.src_y = k.src_y # this should be made differently
-    csd_electro=export_at_electrodes(opts)
+    csd_electro=export_at_electrodes(opts,fl)
     
     # [cleanup] this is problematic...since opts is modified by the remove_electrodes
     opts=kcsd_opts()
-    pots =read_data(100.0,101.0)
+    pots =read_data(100.0,101.0,fl)
     k = do_kcsd(pots,opts)
     opts.src_x = k.src_x
     opts.src_y = k.src_y # this should be made differently
-    csd_centers=export_at_centers(opts)
+    csd_centers=export_at_centers(opts,fl)
     return ;
 
 # needs further work, it is very slow
@@ -169,7 +169,7 @@ def animation():
     return ;
 
 
-validate()
+#validate()
 
 # -- 
 # # Read s seconds, compute, and plot the kCSD

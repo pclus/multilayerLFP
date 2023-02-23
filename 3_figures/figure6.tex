@@ -1,0 +1,110 @@
+\documentclass[ ]{standalone}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+%\usepackage[mathscr]{eucal}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{array}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{float}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage{tikz}
+\usetikzlibrary{tikzmark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{epstopdf}
+\usepackage{latexsym}
+\usepackage{keyval}
+\usepackage{ifthen}
+\usepackage{moreverb}
+%\usepackage{mathastext}
+\usepackage[shell,cleanup,subfolder]{gnuplottex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\definecolor{myBlue}{RGB}{0,84, 159}
+%\usepackage[lmargin=2cm,rmargin=0cm,tmargin=2cm,bmargin=2cm]{geometry}
+\usepackage[pass,paperwidth=8.5in,paperheight=11in]{geometry}
+%\geometry{
+%	paperwidth=30cm,
+%	paperheight=0cm,
+%	margin=2cm
+%}
+
+ \renewcommand{\familydefault}{\sfdefault}
+
+
+\begin{document} 
+%\begin{minipage}{800pt}
+% \hspace{1.5cm}\resizebox{750pt}{!}{\input{pp/diag}}\hspace*{0.550cm}\\[40pt]
+%\end{minipage}
+
+
+\begin{minipage}{10in}
+	\vspace*{0.7cm}
+	\hspace*{1.5cm}
+	\centering
+\begin{gnuplot}[terminal={epslatex},scale=0.9,terminaloptions={color size 10.0,6.0 rounded}]
+        set border lw 2
+        unset grid
+        unset key
+        set loadpath '~/Documents/Data/UPO-tACs/7_results/csd_comparison/timefreq_heatmaps/'
+	set multiplot layout 2,2 columnsfirst title '\Large \bf Subject 9'
+
+	set rmargin 8
+	set lmargin 8
+
+	# ----------------------------------------------------------------
+	df=0.1
+	set ytics 500
+	set xtics 10
+	set xrange[0:100]
+	set yrange[-3840:0]
+
+	set ylabel '\large Depth [$\mu$m] '
+	set xlabel '\large Freq. [Hz]'
+	set cblabel '\large Power [V$^2$]'
+
+	dp=3840
+	l1=-0.061*dp
+	l2=-0.413*dp
+	l3=-0.494*dp
+	l4=-0.630*dp
+	l5=-0.791*dp
+	l6=-0.844*dp
+	set object 1 rectangle from 0,l2 to 100,l1  fs empty border rgb 'black' lw 5 front
+	set object 2 rectangle from 0,l4 to 100,l3  fs empty border rgb 'black' lw 5 front
+	set object 3 rectangle from 0,l6 to 100,l5  fs empty border rgb 'black' lw 5 front
+
+
+	set logs zcb
+	set pale @RAINBOW
+	set cbrange[1e-17:2e-15]
+	init = -14
+	nrow = 2
+	ypos(init,nrow,y)=-dp-(init-y*(20/nrow))
+
+	set label 1 at graph 0.83,0.87 center '\large \color{white}\bf LFP pre' front
+	plot 'psd_mean_tfhm_filtered_pre.dat' matrix every 1 u (df*$2):(ypos(init,nrow,$1)):3 w ima
+	# ----------------------------------------------------------------
+	set label 1 at graph 0.83,0.87 center '\large \color{white}\bf LFP post' front
+	plot 'psd_mean_tfhm_filtered_post.dat' matrix every 1 u (df*$2):(ypos(init,nrow,$1)):3 w ima
+	# ----------------------------------------------------------------
+	set cbrange[1e-23:1e-21]
+	set cblabel '\large Power [(A/$\mu$m$^3$)$^2$]'
+	init = -10.0
+	nrow = 2
+	set label 1 at graph 0.83,0.87 center '\large \color{white}\bf kCSD pre' front
+	plot 'psd_mean_tfhm_kCSD_centers_pre.dat' matrix every 1 u (df*$2):(ypos(init,nrow,$1)):3 w ima
+	# ----------------------------------------------------------------
+	set label 1 at graph 0.83,0.87 center '\large \color{white}\bf kCSD post' front
+	plot 'psd_mean_tfhm_kCSD_centers_post.dat' matrix every 1 u (df*$2):(ypos(init,nrow,$1)):3 w ima
+
+
+\end{gnuplot}
+
+\end{minipage}
+\end{document}

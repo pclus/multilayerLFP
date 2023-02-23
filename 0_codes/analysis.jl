@@ -3,7 +3,7 @@
 push!(LOAD_PATH, "/home/pclusella/Documents/Data/UPO-tACs/0_codes/")
 cd("/home/pclusella/Documents/Data/UPO-tACs/0_codes/")
 using NeuropixelAnalysis
-using DelimitedFiles, Multitaper, Plots, DSP;
+using DelimitedFiles, Multitaper, Plots, DSP, Statistics;
 # plotlyjs()
 
 # Comparison between raw and filtered data----------------------
@@ -103,31 +103,18 @@ plot(f, mean_psd, ribbon=std_psd, c=1, fillalpha=0.25, yaxis=:log, yrange=(1e-23
 
 # -------------------------------------------------------------
 # Segmentation analysis for all channels and create the heatmaps for the averages
-# THIS SHOULD BE A FUNCTION
-#using Statistics
-n = 384;
-l = 2000;
-
-psd_mean_tfhm = zeros(n,l);
-psd_std_tfhm  = zeros(n,l);
-
-state = Threads.Atomic{Int}(0);
-fl = ""
-
-Threads.@threads for id in 1:n
-   Threads.atomic_add!(state, 1)
-   print("--> ",state[]," out of ",n,"\n");
-   flush(stdout);
-   t,f,tfhm = timefreq(id,fl);
-   f_idx,f_tfhm = movfilter(t,tfhm,fl);
-   psd_mean_tfhm[id,:] = mean(f_tfhm,dims=2);  
-   psd_std_tfhm[id,:] = std(f_tfhm,dims=2);
+n=[ 384,384,190,376]
+for cond in ("pre","post")
+    for (i,data) in enumerate(("kCSD_centers_","filtered_","csd_","bipolar_"))
+        fl=data*cond
+        m, s = heatmap_segments(fl,n[i])
+        writedlm("../4_outputs/psd_mean_tfhm_" * fl * ".dat", m', ' ');
+        writedlm("../4_outputs/psd_std_tfhm_" * fl * ".dat", s', ' ');
+        # print(i,data,n[i],"\n")
+    end
 end
 
-writedlm("../4_outputs/psd_mean_tfhm_"*fl*".dat",psd_mean_tfhm',' ');
-writedlm("../4_outputs/psd_std_tfhm_"*fl*".dat",psd_std_tfhm',' ');
-
-heatmap(0.1:0.1:200,1:n,log.(psd_mean_tfhm))
+# heatmap(0.1:0.1:200,1:384,log.(psd_mean_tfhm))
 # -------------------------------------------------------------
 
 
