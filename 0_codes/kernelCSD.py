@@ -88,13 +88,16 @@ def validate():
     Rs=np.linspace(10, 100, num=10)
     hs=np.arange(1,101,10)
     cverrors=np.zeros([Rs.size,lambdas.size,hs.size])
+    idxRs = Rs.repeat(lambdas.size*hs.size);
+    idxLb = np.tile(lambdas.repeat(hs.size),Rs.size);
+    idxh  = np.tile(hs,lambdas.size*Rs.size);
     for i,h in enumerate(hs):
         opts.h=h
         k = do_kcsd(pots,opts)
         k.cross_validate(lambdas=lambdas, Rs=Rs)
         cverrors[:,:,i]=k.errs
     np.savetxt("/home/pclusella/Documents/Data/UPO-tACs/7_results/kCSD_validation/cv_errors.dat", 
-               cverrors)
+               np.column_stack([idxRs,idxLb,idxh,cverrors.reshape(Rs.size*lambdas.size*hs.size)]))
     return cverrors
     
 def export_at_electrodes(opts,fl):
