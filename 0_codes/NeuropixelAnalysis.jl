@@ -3,7 +3,7 @@ module NeuropixelAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP,Statistics;
 
 export DelimitedFiles, Multitaper, Plots, DSP,Statistics
-export read_channel,channel_idx,heatmapMT,timefreq,movfilter,heatmap_segments
+export read_channel,channel_idx,heatmapMT,timefreq,movfilter,heatmap_segments, process_data
 
 """
     read_channel(id, t0, tf, fl)
@@ -25,7 +25,7 @@ function read_channel(id, t0, tf, fl) # Equivalent to the read_binary.c code
 
     data = zeros(m)
     fin = open("../1_data/" * fl * ".bin", "r")
-    for i in 1:id
+    for i in 0:id
         read!(fin, data)
     end
     close(fin)
@@ -43,13 +43,39 @@ function read_channel(id, t0, tf, fl) # Equivalent to the read_binary.c code
 end
 
 """
+    cut_cortex(fl,channels)
+
+Read the channels listed in the array `channels` from the "fl" binary file,
+filter them, and write in a 'cortex_'*fl binary file.
+Already bandpass_filtered.
+"""
+function cut_cortex(fl,n0,nf) # Equivalent to the read_binary.c code
+
+    rate = 2500.0
+    dt = 1 / rate
+    t0 = dt
+    tf = 900.0
+
+    bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=2500), Butterworth(3))
+    fout = open("../1_data/cortex_" * fl * ".bin", "w")
+
+    for id in n0:nf
+        t, ch = read_channel(id, t0, tf, fl)
+        fil_ch = filtfilt(bpfilter, ch)
+        write(fout, fil_ch)
+    end
+    close(fout)
+end
+
+
+"""
     bandpass_filter(fl)
 
 Bandpass filter all data from binary file referenced by `fl` between 1 and 300Hz.
 Uses a Butterworth filter of order 3 and it stores it in a new binary file 
 named `../1_data/filtered_...`.
 """
-function bandpass_filter(fl)
+function bandpass_filter(fl) # possibly deprecated
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
@@ -59,7 +85,7 @@ function bandpass_filter(fl)
     bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=2500), Butterworth(3))
     fout = open("../1_data/filtered_" * fl * ".bin", "w")
 
-    for id in 1:384
+    for id in 0:n-1
         t, ch = read_channel(id, t0, tf, fl)
         fil_ch = filtfilt(bpfilter, ch)
         write(fout, fil_ch)
@@ -73,34 +99,33 @@ end
 
 Store in a binary file the bipolar data obtained by computing the first 
 derivative of the data using a symmetric stencil in along each neuropixel column.
+SHOULD BE CHANGED TO TAKE next-current INSTEAD OF next-previous
 """
-function compute_bipolar(fl)
+function compute_bipolar(flin,flout,n)
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
     tf = 900.0
-    n = 384
 
-    fout = open("../1_data/bipolar_" * fl * ".bin", "w")
+    fout = open("../1_data/"* flout * ".bin", "w")
 
-    fl = "filtered_" * fl
-    t, prev_a = read_channel(1, t0, tf, fl)
-    t, prev_b = read_channel(2, t0, tf, fl)
-    t, prev_c = read_channel(3, t0, tf, fl)
-    t, prev_d = read_channel(4, t0, tf, fl)
+    t, prev_a = read_channel(0, t0, tf, flin)
+    t, prev_b = read_channel(1, t0, tf, flin)
+    t, prev_c = read_channel(2, t0, tf, flin)
+    t, prev_d = read_channel(3, t0, tf, flin)
 
-    t, curr_a = read_channel(5, t0, tf, fl)
-    t, curr_b = read_channel(6, t0, tf, fl)
-    t, curr_c = read_channel(7, t0, tf, fl)
-    t, curr_d = read_channel(8, t0, tf, fl)
+    t, curr_a = read_channel(4, t0, tf, flin)
+    t, curr_b = read_channel(5, t0, tf, flin)
+    t, curr_c = read_channel(6, t0, tf, flin)
+    t, curr_d = read_channel(7, t0, tf, flin)
 
     inv_dy = 1 / 20.0 # 1/μm
 
-    for id in 9:4:n
-        t, next_a = read_channel(id, t0, tf, fl)
-        t, next_b = read_channel(id + 1, t0, tf, fl)
-        t, next_c = read_channel(id + 2, t0, tf, fl)
-        t, next_d = read_channel(id + 3, t0, tf, fl)
+    for id in 8:4:n-1
+        t, next_a = read_channel(id    , t0, tf, flin)
+        t, next_b = read_channel(id + 1, t0, tf, flin)
+        t, next_c = read_channel(id + 2, t0, tf, flin)
+        t, next_d = read_channel(id + 3, t0, tf, flin)
 
         bip_a = 0.5 * inv_dy * (prev_a - next_a)
         bip_b = 0.5 * inv_dy * (prev_b - next_b)
@@ -133,35 +158,33 @@ end
 Store in a binary file the CSD obtained by computing the Laplacian 
 using a 2-dimensional diagonal finite difference stencil.
 """
-function compute_csd(fl)
+function compute_csd(flin,flout,n)
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
     tf = 900.0
-    n = 384
 
-    fout = open("../1_data/csd_" * fl * ".bin", "w")
-    fl = "filtered_" * fl
+    fout = open("../1_data/" * flout * ".bin", "w")
 
-    t, ch_5 = read_channel(1, t0, tf, fl)
-    t, ch_6 = read_channel(2, t0, tf, fl)
-    t, ch_7 = read_channel(3, t0, tf, fl)
-    t, ch_8 = read_channel(4, t0, tf, fl)
+    t, ch_5 = read_channel(0, t0, tf, flin)
+    t, ch_6 = read_channel(1, t0, tf, flin)
+    t, ch_7 = read_channel(2, t0, tf, flin)
+    t, ch_8 = read_channel(3, t0, tf, flin)
 
     inv_dy2 = 1 / 25.61^2 # 1/μm
     σ = 1.0 # conductivity S/μm or 1/ (Ω μm)
 
-    for id in 5:4:n
+    for id in 4:4:n-1
 
         ch_1 = ch_5
         ch_2 = ch_6
         ch_3 = ch_7
         ch_4 = ch_8
 
-        t, ch_5 = read_channel(id + 0, t0, tf, fl)
-        t, ch_6 = read_channel(id + 1, t0, tf, fl)
-        t, ch_7 = read_channel(id + 2, t0, tf, fl)
-        t, ch_8 = read_channel(id + 3, t0, tf, fl)
+        t, ch_5 = read_channel(id + 0, t0, tf, flin)
+        t, ch_6 = read_channel(id + 1, t0, tf, flin)
+        t, ch_7 = read_channel(id + 2, t0, tf, flin)
+        t, ch_8 = read_channel(id + 3, t0, tf, flin)
 
         csd_right = -σ * inv_dy2 * (-4.0 * ch_4 + ch_1 + ch_2 + ch_5 + ch_6)
         csd_left = -σ * inv_dy2 * (-4.0 * ch_5 + ch_3 + ch_4 + ch_7 + ch_8)
@@ -177,9 +200,10 @@ end
 """
     channel_idx(chid)
 
-Given the id of a channel, return its index for the csd, if it exists
+Given the id of a channel, return its index for the csd, if it exists.
 """
-function channel_idx(chid)
+function channel_idx(ch_id)
+    chid=ch_id+1
     i = -1
     if chid % 4 != 0 && chid % 4 != 1
         print("Channel not available")
@@ -214,7 +238,7 @@ function heatmapMT(t0, tf, fl, channels)
     Threads.@threads for id in channels
         t, chdat = read_channel(id, t0, tf, fl)
         S = multispec(chdat, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=true)
-        hm[id, :] = S.S[1:l]
+        hm[id+1, :] = S.S[1:l]
         if id % 5 == 0
             print(id, "\r")
             flush(stdout)
@@ -302,13 +326,14 @@ end
     Bandpass-filters the pre and post data, and computes the CSD 
     and bipolar binary files. 
 """
-function process_data()
-    bandpass_filter("pre")
-    bandpass_filter("post")
-    compute_bipolar("pre")
-    compute_bipolar("post")
-    compute_csd("pre")
-    compute_csd("post")
+function process_data(n0,nf)
+    n=length(n0:nf)
+    cut_cortex("pre",n0,nf)
+    cut_cortex("post",n0,nf)
+    compute_bipolar("cortex_pre","bipolar_pre",n)   # n should be divisible by 4
+    compute_bipolar("cortex_post","bipolar_post",n) # n should be divisible by 4
+    compute_csd("cortex_pre","csd_pre",n)           # n should be divisible by 4
+    compute_csd("cortex_post","csd_post",n)         # n should be divisible by 4
 end
 
 """
@@ -337,7 +362,7 @@ function heatmap_segments(fl,n)
         Threads.atomic_add!(state, 1)
         print("--> ",state[]," out of ",n,"\n");
         flush(stdout);
-        t,f,tfhm = timefreq(id,fl);
+        t,f,tfhm = timefreq(id-1,fl);
         f_idx,f_tfhm = movfilter(t,tfhm,flmv);
         psd_mean_tfhm[id,:] = mean(f_tfhm,dims=2);  
         psd_std_tfhm[id,:] = std(f_tfhm,dims=2);

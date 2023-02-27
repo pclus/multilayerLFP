@@ -6,6 +6,10 @@ using NeuropixelAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics;
 # plotlyjs()
 
+n0=228;
+nf=360;
+process_data(n0,nf);
+
 
 # Load time series for a specific channel from second 200 to 300:
 t0 = 100;
