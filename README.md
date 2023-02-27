@@ -217,6 +217,7 @@ plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 
 ## Next steps:
 
+-. Repeat analysis only in cortex!
 0. Code cleaning:
 	- [ ] Create a package for julia
 	- [ ] Make indices always go from 0 to 383
@@ -225,7 +226,6 @@ plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 1. Look for differences in **time-frequency** accross channels
 	- [] Moving window time-freq heatmap to visualize better the differences.
 	- [] Non-parametric analysis
-	- ...
 2. [x] CSD using k-density method. 
 	- [ ] Note about kCSD and its validation:
 		- Error plots with results from cross validation
@@ -235,10 +235,10 @@ plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 	- [] Check phase-amplitude relation between $\alpha$ and $\gamma$
 4. Ask UPO:
 	- [] Are the movement artifacts because of the movement, or the change in "brain state"? Ask UPO
-	- [] What's the reason for the 50Hz and 60 Hz artifacts?
+	- [] What's the reason for the 50Hz and 60 Hz artifacts? Maybe noise for "zero" stimulation
 	- [] How to detect the "broken" electrodes? are they really "broken"?
 5. Other:
-	- [] P-values heatmaps, use 4 colors (3 + white), one for each decade.
 	- [] T-test assumes normalitiy, should check there are no long tails at least.
 	- [] Permutation tests (Giulio's paper)
+	- [] Analyze movement data
 
