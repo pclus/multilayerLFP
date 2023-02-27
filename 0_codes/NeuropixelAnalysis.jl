@@ -114,33 +114,24 @@ function compute_bipolar(flin,flout,n)
     t, prev_c = read_channel(2, t0, tf, flin)
     t, prev_d = read_channel(3, t0, tf, flin)
 
-    t, curr_a = read_channel(4, t0, tf, flin)
-    t, curr_b = read_channel(5, t0, tf, flin)
-    t, curr_c = read_channel(6, t0, tf, flin)
-    t, curr_d = read_channel(7, t0, tf, flin)
-
     inv_dy = 1 / 20.0 # 1/μm
 
-    for id in 8:4:n-1
-        t, next_a = read_channel(id    , t0, tf, flin)
-        t, next_b = read_channel(id + 1, t0, tf, flin)
-        t, next_c = read_channel(id + 2, t0, tf, flin)
-        t, next_d = read_channel(id + 3, t0, tf, flin)
+    nf = n - n%4 - 4 
+    for id in 4:4:nf-1
+        t, curr_a = read_channel(id    , t0, tf, flin)
+        t, curr_b = read_channel(id + 1, t0, tf, flin)
+        t, curr_c = read_channel(id + 2, t0, tf, flin)
+        t, curr_d = read_channel(id + 3, t0, tf, flin)
 
-        bip_a = 0.5 * inv_dy * (prev_a - next_a)
-        bip_b = 0.5 * inv_dy * (prev_b - next_b)
-        bip_c = 0.5 * inv_dy * (prev_c - next_c)
-        bip_d = 0.5 * inv_dy * (prev_d - next_d)
+        bip_a = - inv_dy * (prev_a - curr_a)
+        bip_b = - inv_dy * (prev_b - curr_b)
+        bip_c = - inv_dy * (prev_c - curr_c)
+        bip_d = - inv_dy * (prev_d - curr_d)
 
         prev_a = curr_a
         prev_b = curr_b
         prev_c = curr_c
         prev_d = curr_d
-
-        curr_a = next_a
-        curr_b = next_b
-        curr_c = next_c
-        curr_d = next_d
 
         write(fout, bip_a)
         write(fout, bip_b)
@@ -174,7 +165,8 @@ function compute_csd(flin,flout,n)
     inv_dy2 = 1 / 25.61^2 # 1/μm
     σ = 1.0 # conductivity S/μm or 1/ (Ω μm)
 
-    for id in 4:4:n-1
+    nf = n - n%4 - 4
+    for id in 4:4:nf
 
         ch_1 = ch_5
         ch_2 = ch_6
@@ -187,7 +179,7 @@ function compute_csd(flin,flout,n)
         t, ch_8 = read_channel(id + 3, t0, tf, flin)
 
         csd_right = -σ * inv_dy2 * (-4.0 * ch_4 + ch_1 + ch_2 + ch_5 + ch_6)
-        csd_left = -σ * inv_dy2 * (-4.0 * ch_5 + ch_3 + ch_4 + ch_7 + ch_8)
+        csd_left  = -σ * inv_dy2 * (-4.0 * ch_5 + ch_3 + ch_4 + ch_7 + ch_8)
 
         write(fout, csd_right)
         write(fout, csd_left)
@@ -330,10 +322,10 @@ function process_data(n0,nf)
     n=length(n0:nf)
     cut_cortex("pre",n0,nf)
     cut_cortex("post",n0,nf)
-    compute_bipolar("cortex_pre","bipolar_pre",n)   # n should be divisible by 4
-    compute_bipolar("cortex_post","bipolar_post",n) # n should be divisible by 4
-    compute_csd("cortex_pre","csd_pre",n)           # n should be divisible by 4
-    compute_csd("cortex_post","csd_post",n)         # n should be divisible by 4
+    compute_bipolar("cortex_pre","bipolar_pre",n)   
+    compute_bipolar("cortex_post","bipolar_post",n) 
+    compute_csd("cortex_pre","csd_pre",n)           
+    compute_csd("cortex_post","csd_post",n)         
 end
 
 """

@@ -220,9 +220,11 @@ plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 -. Repeat analysis only in cortex!
 0. Code cleaning:
 	- [ ] Create a package for julia
-	- [ ] Make indices always go from 0 to 383
+	- [x] Make indices always go from 0 to 383
 	- [ ] Fix the authomatic paths to directories to load/save data in `*jl` and  `*py` files
 	- [ ] Further fix the pass of the arguments in the kcsd code (src_x and src_y). 
+	- [ ] For cortex electrodes in csd and bipolar, maybe we should return (and store in the binary) the number
+of recorded electrodes. This will depend on how much it varies from subject to subject.
 1. Look for differences in **time-frequency** accross channels
 	- [] Moving window time-freq heatmap to visualize better the differences.
 	- [] Non-parametric analysis

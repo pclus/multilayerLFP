@@ -6,8 +6,8 @@ using NeuropixelAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics;
 # plotlyjs()
 
-n0=228;
-nf=360;
+n0=226;
+nf=361;
 process_data(n0,nf);
 
 
