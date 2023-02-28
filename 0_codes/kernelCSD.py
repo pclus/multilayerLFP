@@ -1,3 +1,7 @@
+# Execute this with:
+# exec(open("../0_codes/kernelCSD.py").read())
+# opts=kcsd_opts()
+# csd_centers=export_at_centers(opts,"pre")
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -44,10 +48,10 @@ def read_data(t0,tf,fl):
     return data;
 
 # Remove broken electrodes
-def remove_broken(pots,opts):
-    rmv=np.array([56,135,191,198,325])
-    pots=np.delete(pots,rmv,0)
-    opts.ele_pos=np.delete(opts.ele_pos,rmv,0)
+def remove_broken(pots,opts,broken):
+    # rmv=np.array([56,135,191,198,325])
+    pots=np.delete(pots,broken,0)
+    opts.ele_pos=np.delete(opts.ele_pos,broken,0)
     return pots,opts;
 
 # Compute 2D kCSD in the entire space
@@ -78,12 +82,23 @@ def kcsd_error(pots,opts):
     error = np.linalg.norm(ownk.pots-est_pots)**2 #+ opts.lambd*np.linalg.norm(est_pots)**2;
     return ownk,error;
 
+def select_cortex(pots,opts,n0,nf):
+    pots=pots[n0:nf];
+    opts.ele_pos=opts.ele_pos[n0:nf];
+    opts.ele_y=opts.ele_y[n0:nf];
+    opts.ele_x=opts.ele_x[n0:nf];
+    opts.ymin=np.floor(n0/2)*20-100.0
+    opts.ymax=np.floor(nf/2)*20+100.0
+    return pots,opts;
+
 
 # CV to obtain reasonable values of R and lambda.
 # A bit heavy for long time series
 def validate():
     opts=kcsd_opts()
     pots =read_data(100.0,100.0,"pre")
+    rmv=np.array([56,135,191,198,325])
+    pots,opts = remove_broken(pots,opts,rmv)
     lambdas=np.logspace(-12, -1, num=12)
     Rs=np.linspace(10, 100, num=10)
     hs=np.arange(1,101,10)
@@ -100,31 +115,45 @@ def validate():
                np.column_stack([idxRs,idxLb,idxh,cverrors.reshape(Rs.size*lambdas.size*hs.size)]))
     return cverrors
     
-def export_at_electrodes(opts,fl):
-    pots =read_data(0.0004,900.0,fl)
-    pots,opts = remove_broken(pots,opts)
-    redk = oKCSD2D(opts.ele_pos, pots, h=opts.h, sigma=opts.sigma,                                                                                                                                                       
-            xmin=opts.xmin, xmax=opts.xmax,
-            ymin=opts.ymin, ymax=opts.ymax,
-            n_src_init=opts.n_src_init, src_type=opts.src_type, 
-            R_init=opts.R_init,lambd=opts.lambd,
-            own_est=np.array((opts.ele_x,opts.ele_y)),own_src=(opts.src_x,opts.src_y)) 
-    est_csd = redk.values('CSD')
-    # est_pot = redk.values('POT') # can export estimated potentials
-    with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/kCSD_electrodes_"+fl+".bin", "wb") as fout:
-        est_csd.tofile(fout,"");
-    return est_csd;
+# def export_at_electrodes(opts,fl):
+#     pots =read_data(0.0004,900.0,fl)
+#     rmv=np.array([56,135,191,198,325])
+#     pots,opts = remove_broken(pots,opts,rmv)
+#     redk = oKCSD2D(opts.ele_pos, pots, h=opts.h, sigma=opts.sigma,                                                                                                                                                       
+#             xmin=opts.xmin, xmax=opts.xmax,
+#             ymin=opts.ymin, ymax=opts.ymax,
+#             n_src_init=opts.n_src_init, src_type=opts.src_type, 
+#             R_init=opts.R_init,lambd=opts.lambd,
+#             own_est=np.array((opts.ele_x,opts.ele_y)),own_src=(opts.src_x,opts.src_y)) 
+#     est_csd = redk.values('CSD')
+#     # est_pot = redk.values('POT') # can export estimated potentials
+#     with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/kCSD_electrodes_"+fl+".bin", "wb") as fout:
+#         est_csd.tofile(fout,"");
+#     return est_csd;
 
 def export_at_centers(opts,fl):
     pots =read_data(0.0004,900.0,fl)
-    pots,opts = remove_broken(pots,opts)
-    loc_y=np.arange(0.0,3840.0,10)
+    n0=226;
+    nf=361;
+    pots,opts=select_cortex(pots,opts,n0,nf)
+    rmv=np.array([325])-n0
+    pots,opts = remove_broken(pots,opts,rmv)
+    loc_y=np.arange(np.floor(n0/2)*20,np.ceil(nf/2)*20,10)
     loc_x=np.zeros(loc_y.size)
+
+    step=20
+    x = np.arange(opts.xmin,opts.xmax+step,step)
+    y = np.arange(opts.ymin,opts.ymax+step,step)
+
+    xx=np.tile(x,y.size)
+    yy=y.repeat(x.size)
+    # sources = np.column_stack((xx,yy))
+
     redk = oKCSD2D(opts.ele_pos, pots, h=opts.h, sigma=opts.sigma,                                                                                                                                                       
             xmin=opts.xmin, xmax=opts.xmax,
             ymin=opts.ymin, ymax=opts.ymax,
             n_src_init=opts.n_src_init, src_type=opts.src_type, 
-            R_init=opts.R_init,lambd=opts.lambd,own_est=np.array((loc_x,loc_y)),own_src=(opts.src_x,opts.src_y)) 
+            R_init=opts.R_init,lambd=opts.lambd,own_est=np.array((loc_x,loc_y)),own_src=(xx,yy)) 
     est_csd = redk.values('CSD')
     # est_pot = redk.values('POT') # can export estimated potentials
     with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/kCSD_centers_"+fl+".bin", "wb") as fout:
@@ -142,19 +171,19 @@ def export_at_centers(opts,fl):
 # -----------------------------------------------------
 def process_data(fl):
     # Requires a good amount of free RAM memory (tested in a system with 64Gb)
-    opts=kcsd_opts()
-    pots =read_data(100.0,101.0,fl)
-    k = do_kcsd(pots,opts)
-    opts.src_x = k.src_x
-    opts.src_y = k.src_y # this should be made differently
-    csd_electro=export_at_electrodes(opts,fl)
+    # opts=kcsd_opts()
+    # pots =read_data(100.0,101.0,fl)
+    # k = do_kcsd(pots,opts)
+    # opts.src_x = k.src_x
+    # opts.src_y = k.src_y # this should be made differently
+    # csd_electro=export_at_electrodes(opts,fl)
     
     # [cleanup] this is problematic...since opts is modified by the remove_electrodes
     opts=kcsd_opts()
-    pots =read_data(100.0,101.0,fl)
-    k = do_kcsd(pots,opts)
-    opts.src_x = k.src_x
-    opts.src_y = k.src_y # this should be made differently
+    # pots =read_data(100.0,101.0,fl)
+    # k = do_kcsd(pots,opts)
+    # opts.src_x = k.src_x
+    # opts.src_y = k.src_y # this should be made differently
     csd_centers=export_at_centers(opts,fl)
     return ;
 
@@ -172,12 +201,12 @@ def animation():
     return ;
 
 
-validate()
+# validate()
 
 # -- 
-# # Read s seconds, compute, and plot the kCSD
+# Read s seconds, compute, and plot the kCSD
 # s = 1.0
-# pots =read_data(0.0004,0.0004)
+# pots =read_data(0.0004,0.0004,"pre")
 # k = do_kcsd(pots,opts)
 # est_csd = k.values('CSD')
 # opts.src_x=k.src_x;

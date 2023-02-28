@@ -62,7 +62,10 @@ plot!(S2.f, S2.S, xlim=(0, 200), ylim=(1e-18, 1e-15), lw=1.0, yaxis=:log)
 
 # -------------------------------------------------------------
 # Create a heatmap of the pre data from 200s to 300s using Multitaper:
-w, lfp = heatmapMT(200.0, 300.0, "filtered_pre", 1:384);
+n0=226;
+nf=361;
+w, lfp_cortex = heatmapMT(200.0, 300.0, "cortex_pre", 0:(nf-n0));
+w, lfp = heatmapMT(200.0, 300.0, "filtered_pre", 0:383);
 w, csd = heatmapMT(200.0, 300.0, "csd_pre", 1:190);
 w, bip = heatmapMT(200.0, 300.0, "bipolar_pre", 1:376);
 w, kcsd = heatmapMT(200.0, 300.0, "kCSD_electrodes_pre", 1:384);
@@ -72,8 +75,8 @@ w, lfp_post = heatmapMT(200.0, 300.0, "filtered_post", 1:384);
 # gr()
 # heatmap(w,1:384,kcsd')
 
+writedlm("../4_outputs/cortex_lfp.dat", lfp_cortex', " ");
 writedlm("../4_outputs/lfp.dat", lfp', " ");
-writedlm("../4_outputs/lfp.dat", lfp_post', " ");
 writedlm("../4_outputs/csd.dat", csd', " ");
 writedlm("../4_outputs/bip.dat", bip', " ");
 writedlm("../4_outputs/kcsd_cent.dat", kcsd', " ");
@@ -99,11 +102,12 @@ plot(f, mean_psd, ribbon=std_psd, c=1, fillalpha=0.25, yaxis=:log, yrange=(1e-23
 
 # -------------------------------------------------------------
 # Segmentation analysis for all channels and create the heatmaps for the averages
-n=[ 384,384,190,376]
+# ns=[ 384,384,190,376] # full
+ns=[ n, n, n/2-2,n-4]   # cortex
 for cond in ("pre","post")
     for (i,data) in enumerate(("kCSD_centers_","filtered_","csd_","bipolar_"))
         fl=data*cond
-        m, s = heatmap_segments(fl,n[i])
+        m, s = heatmap_segments(fl,ns[i])
         writedlm("../4_outputs/psd_mean_tfhm_" * fl * ".dat", m', ' ');
         writedlm("../4_outputs/psd_std_tfhm_" * fl * ".dat", s', ' ');
         # print(i,data,n[i],"\n")

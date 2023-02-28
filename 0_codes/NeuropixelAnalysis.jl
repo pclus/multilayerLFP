@@ -49,7 +49,7 @@ Read the channels listed in the array `channels` from the "fl" binary file,
 filter them, and write in a 'cortex_'*fl binary file.
 Already bandpass_filtered.
 """
-function cut_cortex(fl,n0,nf) # Equivalent to the read_binary.c code
+function cut_cortex(fl,n0,nf) 
 
     rate = 2500.0
     dt = 1 / rate
@@ -116,7 +116,7 @@ function compute_bipolar(flin,flout,n)
 
     inv_dy = 1 / 20.0 # 1/μm
 
-    nf = n - n%4 - 4 
+    nf = n - n%4 
     for id in 4:4:nf-1
         t, curr_a = read_channel(id    , t0, tf, flin)
         t, curr_b = read_channel(id + 1, t0, tf, flin)
@@ -165,8 +165,8 @@ function compute_csd(flin,flout,n)
     inv_dy2 = 1 / 25.61^2 # 1/μm
     σ = 1.0 # conductivity S/μm or 1/ (Ω μm)
 
-    nf = n - n%4 - 4
-    for id in 4:4:nf
+    nf = n - n%4 
+    for id in 4:4:nf-1
 
         ch_1 = ch_5
         ch_2 = ch_6
@@ -338,7 +338,7 @@ function heatmap_segments(fl,n)
     # n = 384;
     l = 2000;
 
-    flmv=findall("pre",fl)
+    flmv=findall("_pre",fl)
     if isempty(flmv)
         flmv="post"
     else
@@ -350,14 +350,14 @@ function heatmap_segments(fl,n)
 
     state = Threads.Atomic{Int}(0);
     
-    Threads.@threads for id in 1:n
+    Threads.@threads for id in 0:n-1
         Threads.atomic_add!(state, 1)
         print("--> ",state[]," out of ",n,"\n");
         flush(stdout);
-        t,f,tfhm = timefreq(id-1,fl);
+        t,f,tfhm = timefreq(id,fl);
         f_idx,f_tfhm = movfilter(t,tfhm,flmv);
-        psd_mean_tfhm[id,:] = mean(f_tfhm,dims=2);  
-        psd_std_tfhm[id,:] = std(f_tfhm,dims=2);
+        psd_mean_tfhm[id+1,:] = mean(f_tfhm,dims=2);  
+        psd_std_tfhm[id+1,:] = std(f_tfhm,dims=2);
     end
     return psd_mean_tfhm,psd_std_tfhm
 end
