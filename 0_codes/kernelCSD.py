@@ -87,8 +87,8 @@ def select_cortex(pots,opts,n0,nf):
     opts.ele_pos=opts.ele_pos[n0:nf];
     opts.ele_y=opts.ele_y[n0:nf];
     opts.ele_x=opts.ele_x[n0:nf];
-    opts.ymin=np.floor(n0/2)*20-100.0
-    opts.ymax=np.floor(nf/2)*20+100.0
+    opts.ymin=np.floor(n0/2)*20-400.0
+    opts.ymax=3840.0; #np.floor(nf/2)*20+400.0
     return pots,opts;
 
 
@@ -97,8 +97,19 @@ def select_cortex(pots,opts,n0,nf):
 def validate():
     opts=kcsd_opts()
     pots =read_data(100.0,100.0,"pre")
-    rmv=np.array([56,135,191,198,325])
+    n0=226;
+    nf=361;
+    pots,opts=select_cortex(pots,opts,n0,nf)
+    rmv=np.array([325])-n0
     pots,opts = remove_broken(pots,opts,rmv)
+    loc_y=np.arange(np.floor(n0/2)*20,np.ceil(nf/2)*20,10)
+    loc_x=np.zeros(loc_y.size)
+    step=20
+    x = np.arange(opts.xmin,opts.xmax+step,step)
+    y = np.arange(opts.ymin,opts.ymax+step,step)
+    xx=np.tile(x,y.size)
+    yy=y.repeat(x.size)
+
     lambdas=np.logspace(-12, -1, num=12)
     Rs=np.linspace(10, 100, num=10)
     hs=np.arange(1,101,10)
@@ -108,7 +119,11 @@ def validate():
     idxh  = np.tile(hs,lambdas.size*Rs.size);
     for i,h in enumerate(hs):
         opts.h=h
-        k = do_kcsd(pots,opts)
+        k = oKCSD2D(opts.ele_pos, pots, h=opts.h, sigma=opts.sigma,                                                                                                                                                       
+            xmin=opts.xmin, xmax=opts.xmax,
+            ymin=opts.ymin, ymax=opts.ymax,
+            n_src_init=opts.n_src_init, src_type=opts.src_type, 
+            R_init=opts.R_init,lambd=opts.lambd,own_est=np.array((loc_x,loc_y)),own_src=(xx,yy)) 
         k.cross_validate(lambdas=lambdas, Rs=Rs)
         cverrors[:,:,i]=k.errs
     np.savetxt("/home/pclusella/Documents/Data/UPO-tACs/7_results/kCSD_validation/cv_errors.dat", 
@@ -156,7 +171,7 @@ def export_at_centers(opts,fl):
             R_init=opts.R_init,lambd=opts.lambd,own_est=np.array((loc_x,loc_y)),own_src=(xx,yy)) 
     est_csd = redk.values('CSD')
     # est_pot = redk.values('POT') # can export estimated potentials
-    with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/kCSD_centers_"+fl+".bin", "wb") as fout:
+    with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/kcsd_"+fl+".bin", "wb") as fout:
         est_csd.tofile(fout,"");
     return est_csd;
 
@@ -201,7 +216,10 @@ def animation():
     return ;
 
 
-# validate()
+validate()
+# process_data("pre");
+
+
 
 # -- 
 # Read s seconds, compute, and plot the kCSD

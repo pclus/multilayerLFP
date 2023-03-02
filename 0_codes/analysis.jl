@@ -8,7 +8,7 @@ using DelimitedFiles, Multitaper, Plots, DSP, Statistics;
 
 n0=226;
 nf=361;
-process_data(n0,nf);
+# process_data(n0,nf);
 
 
 # Load time series for a specific channel from second 200 to 300:
@@ -103,9 +103,12 @@ plot(f, mean_psd, ribbon=std_psd, c=1, fillalpha=0.25, yaxis=:log, yrange=(1e-23
 # -------------------------------------------------------------
 # Segmentation analysis for all channels and create the heatmaps for the averages
 # ns=[ 384,384,190,376] # full
-ns=[ n, n, n/2-2,n-4]   # cortex
-for cond in ("pre","post")
-    for (i,data) in enumerate(("kCSD_centers_","filtered_","csd_","bipolar_"))
+n=size(n0:nf)[1]
+ns=[ n, n, n/2-2,n-4]    # cortex
+ns=Int.(ns)
+# for cond in ("pre","post")
+for cond in ("pre",)
+    for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_"))
         fl=data*cond
         m, s = heatmap_segments(fl,ns[i])
         writedlm("../4_outputs/psd_mean_tfhm_" * fl * ".dat", m', ' ');
@@ -116,7 +119,15 @@ end
 
 # heatmap(0.1:0.1:200,1:384,log.(psd_mean_tfhm))
 # -------------------------------------------------------------
-
+n0=226;
+nf=361;
+n=size(n0:nf)[1]
+ns=[ n, n, n/2-2,n-4]    # cortex
+ns=Int.(ns)
+fl="kcsd_pre"
+m, s = heatmap_segments(fl,ns[2])
+writedlm("../4_outputs/psd_mean_tfhm_" * fl * ".dat", m', ' ');
+writedlm("../4_outputs/psd_std_tfhm_" * fl * ".dat", s', ' ');
 
 # -------------------------------------------------------------
 # Check for differences between pre and post using t-test of the
