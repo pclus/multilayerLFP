@@ -106,9 +106,10 @@ plot(f, mean_psd, ribbon=std_psd, c=1, fillalpha=0.25, yaxis=:log, yrange=(1e-23
 n=size(n0:nf)[1]
 ns=[ n, n, n/2-2,n-4]    # cortex
 ns=Int.(ns)
-# for cond in ("pre","post")
-for cond in ("pre",)
+# for cond in ("pre",)
+for cond in ("pre","post")
     for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_"))
+    # for (i,data) in enumerate(("kcsd_",))
         fl=data*cond
         m, s = heatmap_segments(fl,ns[i])
         writedlm("../4_outputs/psd_mean_tfhm_" * fl * ".dat", m', ' ');
@@ -119,66 +120,74 @@ end
 
 # heatmap(0.1:0.1:200,1:384,log.(psd_mean_tfhm))
 # -------------------------------------------------------------
-n0=226;
-nf=361;
-n=size(n0:nf)[1]
-ns=[ n, n, n/2-2,n-4]    # cortex
-ns=Int.(ns)
-fl="kcsd_pre"
-m, s = heatmap_segments(fl,ns[2])
-writedlm("../4_outputs/psd_mean_tfhm_" * fl * ".dat", m', ' ');
-writedlm("../4_outputs/psd_std_tfhm_" * fl * ".dat", s', ' ');
+# n0=226;
+# nf=361;
+# n=size(n0:nf)[1]
+# ns=[ n, n, n/2-2,n-4]    # cortex
+# ns=Int.(ns)
+# fl="kcsd_pre"
+# m, s = heatmap_segments(fl,ns[2])
+# writedlm("../4_outputs/psd_mean_tfhm_" * fl * ".dat", m', ' ');
+# writedlm("../4_outputs/psd_std_tfhm_" * fl * ".dat", s', ' ');
 
 # -------------------------------------------------------------
 # Check for differences between pre and post using t-test of the
 # different time windows
 using Statistics, HypothesisTests
 
-n = 384;
 l = 2000;
+n=size(n0:nf)[1]
+ns=[ n, n, n/2-2,n-4]
+ns=Int.(ns)
 
-psd_mean_tfhm_pre = zeros(n, l);
-psd_std_tfhm_pre = zeros(n, l);
-psd_mean_tfhm_post = zeros(n, l);
-psd_std_tfhm_post = zeros(n, l);
-pvals_tfhm = zeros(n, l);
-pvals_uneq_tfhm = zeros(n, l);
+for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_"))
+    n0=ns[i];
 
-state = Threads.Atomic{Int}(0);
+    psd_mean_tfhm_pre = zeros(n0, l);
+    psd_std_tfhm_pre = zeros(n0, l);
+    psd_mean_tfhm_post = zeros(n0, l);
+    psd_std_tfhm_post = zeros(n0, l);
+    pvals_tfhm = zeros(n0, l);
+    pvals_uneq_tfhm = zeros(n0, l);
 
-Threads.@threads for id in 1:n
+    state = Threads.Atomic{Int}(0);
 
-    # Prompt state
-    Threads.atomic_add!(state, 1)
-    print("--> ", state[], " out of ", n, "\n")
-    flush(stdout)
+    Threads.@threads for id in 0:n0-1
 
-    # Pre
-    t, f, tfhm = timefreq(id, "filtered_pre")
-    idx, f_pre = movfilter(t, tfhm, "pre")
-    psd_mean_tfhm_pre[id, :] = mean(f_pre, dims=2)
-    psd_std_tfhm_pre[id, :] = std(f_pre, dims=2)
+        # Prompt state
+        Threads.atomic_add!(state, 1)
+        print("--> ", state[], " out of ", n0, "\n")
+        flush(stdout)
 
-    # Post
-    t, f, tfhm = timefreq(id, "filtered_post")
-    idx, f_post = movfilter(t, tfhm, "post")
-    psd_mean_tfhm_post[id, :] = mean(f_post, dims=2)
-    psd_std_tfhm_post[id, :] = std(f_post, dims=2)
+        # Pre
+        t, f, tfhm = timefreq(id, data*"pre")
+        idx, f_pre = movfilter(t, tfhm, "pre")
+        psd_mean_tfhm_pre[id+1, :] = mean(f_pre, dims=2)
+        psd_std_tfhm_pre[id+1, :] = std(f_pre, dims=2)
 
-    # T-test. 
-    for j in 1:l
-        pvals_uneq_tfhm[id, j] = pvalue(UnequalVarianceTTest(f_pre[j, :], f_post[j, :]))
-        pvals_tfhm[id, j] = pvalue(EqualVarianceTTest(f_pre[j, :], f_post[j, :]))# can be computed from the means
+        # Post
+        t, f, tfhm = timefreq(id, data*"post")
+        idx, f_post = movfilter(t, tfhm, "post")
+        psd_mean_tfhm_post[id+1, :] = mean(f_post, dims=2)
+        psd_std_tfhm_post[id+1, :] = std(f_post, dims=2)
+
+        # T-test. 
+        for j in 1:l
+            pvals_uneq_tfhm[id+1, j] = pvalue(UnequalVarianceTTest(f_pre[j, :], f_post[j, :]))
+            pvals_tfhm[id+1, j] = pvalue(EqualVarianceTTest(f_pre[j, :], f_post[j, :]))# can be computed from the means
+        end
     end
+
+    writedlm("../4_outputs/psd_mean_tfhm_"*data*"pre.dat", psd_mean_tfhm_pre', ' ');
+    writedlm("../4_outputs/psd_std_tfhm_"*data*"pre.dat", psd_std_tfhm_pre', ' ');
+    writedlm("../4_outputs/psd_mean_tfhm_"*data*"post.dat", psd_mean_tfhm_post', ' ');
+    writedlm("../4_outputs/psd_std_tfhm_"*data*"post.dat", psd_std_tfhm_post', ' ');
+    writedlm("../4_outputs/psd_"*data*"pvals_eq.dat", pvals_tfhm', ' ');
+    writedlm("../4_outputs/psd_"*data*"pvals.dat", pvals_uneq_tfhm', ' ');
+    writedlm("../4_outputs/psd_"*data*"difference.dat", (psd_mean_tfhm_post - psd_mean_tfhm_pre)', ' ');
 end
 
-writedlm("../4_outputs/psd_mean_tfhm_post.dat", psd_mean_tfhm_post', ' ');
-writedlm("../4_outputs/psd_std_tfhm_post.dat", psd_std_tfhm_post', ' ');
-writedlm("../4_outputs/psd_mean_tfhm_pre.dat", psd_mean_tfhm_pre', ' ');
-writedlm("../4_outputs/psd_std_tfhm_pre.dat", psd_std_tfhm_pre', ' ');
-writedlm("../4_outputs/psd_pvals.dat", pvals_tfhm', ' ');
-writedlm("../4_outputs/psd_pvals_uneq.dat", pvals_uneq_tfhm', ' ');
-writedlm("../4_outputs/psd_mean_tfhm_difference.dat", (psd_mean_tfhm_post - psd_mean_tfhm_pre)', ' ');
+
 
 # heatmap(0.1:0.1:200,1:n,log.(psd_mean_tfhm))
 

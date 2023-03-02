@@ -153,6 +153,11 @@ For this we use the [Python library](http://biorxiv.org/lookup/doi/10.1101/70851
 We are still generating, validating, and comparing the results, but it produces better results than finite differences.
 The comparison with bipolar, standard CSD, and kCSD should appear in a separate document.
 
+Cross-validation of kCSD method gives the following optimal parameters to estimate
+CSD using only cortex electrodes: R=30.0, h=10, lambda=1e-10.
+The cross-validation results do not seem to change greatly for R between 10 and 40,
+ lambda 1e-12 to 1e-8, and h between 1 and 20.
+
 ## Frequency analysis
 
 Use script `freq_image.sh` (Tools folder).

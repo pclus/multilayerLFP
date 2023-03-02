@@ -362,4 +362,20 @@ function heatmap_segments(fl,n)
     return psd_mean_tfhm,psd_std_tfhm
 end
 
+"""
+    ttest_eqvar(fmean1,fmean2,fstd1,fstd2)
+
+T test of equal variances using pre-saved heatmaps (should have same size)
+"""
+function ttest_eqvar(fmean1,fmean2,fstd1,fstd2)
+    A=dlmread(fmean1)
+    B=dlmread(fmean2)
+    sA=dlmread(fstd1)
+    sB=dlmread(fstd2)
+    nx= ;
+    ny= ;
+    test = EqualVarianceTTest.(nx,ny,A,B,sA,sB)
+end
+
+
 end # module

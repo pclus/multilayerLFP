@@ -10,6 +10,9 @@ from kcsd import oKCSD2D
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
+# Optimal paramters for cortex, e.g., 
+# h=100, R=60 and l=1e-5
+# h=10, R=60 and l=1e-6
 class kcsd_opts:
     def __init__(self, h=10.0,sigma=1.0,xmin=-200.0,xmax=200.0,ymin=-60.0,
                  ymax=3900.0,n_src_init=2000,src_type='gauss',R_init=60.0,lambd=1e-6,gdx=5.0,gdy=5.0):
@@ -177,7 +180,7 @@ def export_at_centers(opts,fl):
 
 
 # opts=kcsd_opts()
-# pots =read_data(100.0,101.0)
+# pots =read_data(100.0,101.0,"pre")
 # print(pots.shape,opts.ele_pos.shape)
 # pots,opts = remove_broken(pots,opts)
 # print(pots.shape,opts.ele_pos.shape)
@@ -216,8 +219,9 @@ def animation():
     return ;
 
 
-validate()
-# process_data("pre");
+#validate()
+process_data("pre");
+process_data("post");
 
 
 
@@ -235,6 +239,11 @@ validate()
 # # --
 
 # # --
+# Read s seconds, compute, and plot the kCSD
+# s = 1.0
+# opts=kcsd_opts(n_src_init=2000,R_init=60,lambd=1e-5,h=100.0)
+# pots =read_data(0.0004,0.0004,"pre")
+# k = do_kcsd(pots,opts)
 # est_csd = k.values('CSD')
 # f1=plt.figure(1)
 # plt.imshow(np.transpose(est_csd[:,::-1,0]),cmap=cm.bwr,aspect='auto') 
