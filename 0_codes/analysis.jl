@@ -12,10 +12,10 @@ nf=361;
 
 
 # Load time series for a specific channel from second 200 to 300:
-t0 = 100;
+t0 = 100.0;
 tf = 200.0;
-id = 196;
-fl = "pre"
+id = 100;
+fl = "cortex_pre"
 t, chdat = read_channel(id, t0, tf, fl);
 
 plot(t, chdat)
@@ -23,39 +23,62 @@ plot(t, chdat)
 
 
 # Compute PSD using Multitaper PSD ----------------------------
-fl = "pre"
-t, chdat = read_channel(150, t0, tf, fl);
-bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=2500), Butterworth(3));
-fil_chdat = filtfilt(bpfilter, chdat)
 rate = 2500.0;
 dt = 1.0 / rate;
-
 NW = 1.0 * length(chdat) * dt / (2.0);  # real bandwith is ω*dt/2.0, and NW = N*ω*dt/2.0
 K = 10;    # number of tappers (should be similar slightly less than 2*NW)
 S = multispec(chdat, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=false);
-fS = multispec(fil_chdat, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=false);
 
 
-p1 = plot(S.f, S.S, xlim=(0, 200), ylim=(1e-18, 1e-15), lw=1.0, yaxis=:log)
-plot!(fS.f, fS.S, xlim=(0, 200), ylim=(1e-18, 1e-15), lw=1.0, yaxis=:log)
-# Ftest pvalues
-# plot(S.f,S.Fpval,ylim=(0.0,1e-2),lt=:scatter,xlim=(0,100))
+p1 = plot(S.f, S.S, xlim=(0, 200), ylim=(1e-18, 1e-14), lw=1.0, yaxis=:log)
 
-t, kcsd = read_channel(id, t0, tf, "kCSD_electrodes_pre");
-t, lcsd = read_channel(channel_idx(id), t0, tf, "csd_pre");
+# Numerical check that the variance of the time signal is the overall power.
+# Does not hold for the MT because of the tappering
+using FFTW
+Fr = rfft(chdat); 
+wr = rfftfreq(length(t), 1.0/dt); 
+
+area = 2.0*sum(abs2.(Fr))*1e-2*dt/length(chdat)
+areaMT=sum(S.S)*1e-2 #df=1e-2
+var(chdat)
+
+# Compare different Power Spectral Densities
+
+f = S.f[1:20000]
+psd1 = S.S[1:20000];
+
+using HypothesisTests
+
+S1 = S.S[1:20000]
+S2 = abs2.(Fr)[1:20000]
+
+function KS_psd(S1,S2,f)
+    df = f[2]-f[1]
+    psd1 = S1/ (sum(S1)*df); # normalization
+    cdf1 = [ sum(psd1[1:i])*df for i in 1:length(psd1)]
+
+    psd2 = S2/ (sum(S2)*df); # normalization
+    cdf2 = [ sum(psd2[1:i])*df for i in 1:length(psd2)]
+
+    sampl=200   # very sensible to this parameter
+    ζ1=rand(sampl)
+    fsampl1 = [f[findfirst(ζ1[i].<=cdf1)] for i in 1:sampl]
+
+    ζ2=rand(sampl)
+    fsampl2 = [f[findfirst(ζ2[i].<=cdf2)] for i in 1:sampl]
+
+    tKS = ApproximateTwoSampleKSTest(fsampl1,fsampl2)
+    return tKS,cdf1,cdf2
+end
+
+KS_psd(S.S[1:20000],abs2.(Fr)[1:20000],f)
+
+t, f, tfhm = timefreq(id, fl);
+m = [pvalue(KS_psd(tfhm[:,i],tfhm[:,j],f)[1]) for i in 1:90,j in 1:90]
+heatmap(m,clim=(0,1e-1)) # changes A LOT depending on `sampl`
+# maybe use χ2 or maybe directly test for stationarity
 
 
-plot(t, kcsd)
-plot!(t, lcsd)
-
-plot(kcsd[1:10000], lcsd[1:10000], lt=:scatter, ms=2, msw=0, lw=0)
-cor(kcsd[1:10000], lcsd[1:10000])
-
-S1 = multispec(kcsd, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=false);
-S2 = multispec(lcsd, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=false);
-
-plot(S1.f, S1.S, xlim=(0, 200), ylim=(1e-18, 1e-15), lw=1.0, yaxis=:log)
-plot!(S2.f, S2.S, xlim=(0, 200), ylim=(1e-18, 1e-15), lw=1.0, yaxis=:log)
 # -------------------------------------------------------------
 # -------------------------------------------------------------
 # -------------------------------------------------------------
@@ -84,8 +107,8 @@ writedlm("../4_outputs/kcsd_cent.dat", kcsd', " ");
 
 # -------------------------------------------------------------
 # Time-frequency analysis for a single channel:
-fl = "csd_pre"
-id = 140
+fl = "cortex_pre"
+id = 100
 t, f, tfhm = timefreq(id, fl);
 writedlm("../4_outputs/ch" * string(id) * "_tfhm_" * fl * ".dat", tfhm, " ");
 
