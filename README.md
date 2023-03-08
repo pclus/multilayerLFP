@@ -10,6 +10,7 @@
 * [Data Overview](#data-overview)
 * [Bandpass filter, bipolar, and CSD](#bandpass-filter-bipolar-and-csd)
 * [Frequency analysis](#frequency-analysis)
+* [Postprocessing and statistical analysis](#postprocessing-and-statistical-analysis)
 * [Next steps:](#next-steps)
 
 <!-- vim-markdown-toc -->
@@ -219,6 +220,17 @@ df=0.1
 set cbrange[1e-18:1e-15]
 plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 ```
+
+## Postprocessing and statistical analysis
+
+1. Postprocessing:
+	- Bandpass filter (Butterworth 3rd order at 300Hz). 
+	- Bandstop (notch) filter at 50 and 60Hz (Butterworth 1st order, 0.1Hz bandwidth, i.e., 49.95-50.05Hz.
+	- Compute bLFP, sCSD, kCSD.
+	- Consider only signals from electrodes within the cortex.
+2. For each datatype (LFP,bLFP,sCSD,kCSD) test for stationarity using Witt et al. (1997). Should see that signals are stationarity if movement is excluded (segments of 10s).
+3. Consider each segment as an independent recording, at compare pre and post datasets (t-test, permutation test, cluster-based permutation test [spatial and spectral clusters]).
+
 
 ## Next steps:
 
