@@ -13,14 +13,17 @@ nf=361;
 
 # Load time series for a specific channel from second 200 to 300:
 t0 = 100.0;
-tf = 200.0;
+tf = 110.0;
 id = 100;
 fl = "cortex_pre"
 t, chdat = read_channel(id, t0, tf, fl);
 
 plot(t, chdat)
 
-
+using StatsBase, HypothesisTests
+ν=autocor(chdat,0:10*2500)
+plot(dt*(0:25000),ν,xlim=(0,1.0))
+# ADFTest(chdat, :none, 500) 
 
 # Compute PSD using Multitaper PSD ----------------------------
 rate = 2500.0;
@@ -60,29 +63,57 @@ function KS_psd(S1,S2,f)
     psd2 = S2/ (sum(S2)*df); # normalization
     cdf2 = [ sum(psd2[1:i])*df for i in 1:length(psd2)]
 
-    sampl=200   # very sensible to this parameter
+    sampl=1000   # very sensible to this parameter
     ζ1=rand(sampl)
     fsampl1 = [f[findfirst(ζ1[i].<=cdf1)] for i in 1:sampl]
 
     ζ2=rand(sampl)
     fsampl2 = [f[findfirst(ζ2[i].<=cdf2)] for i in 1:sampl]
 
+    # notice that we are using the `dev` version of the package
+    # (revert with `] free HypothesisTest`)
     tKS = ApproximateTwoSampleKSTest(fsampl1,fsampl2)
-    return tKS,cdf1,cdf2
+    tAD = KSampleADTest(fsampl1,fsampl2)
+    return tKS,tAD,cdf1,cdf2
 end
 
-KS_psd(S.S[1:20000],abs2.(Fr)[1:20000],f)
+t1,t2,a,b = KS_psd(S.S[1:2000],S.S[1:2000],f)
+
+
 
 t, f, tfhm = timefreq(id, fl);
-m = [pvalue(KS_psd(tfhm[:,i],tfhm[:,j],f)[1]) for i in 1:90,j in 1:90]
-heatmap(m,clim=(0,1e-1)) # changes A LOT depending on `sampl`
+m1 = [pvalue(KS_psd(tfhm[:,i],tfhm[:,j],f)[1]) for i in 1:90,j in 1:90]
+m2 = [pvalue(KS_psd(tfhm[:,i],tfhm[:,j],f)[2]) for i in 1:90,j in 1:90]
+heatmap(m1,clim=(0,1e-1)) # changes A LOT depending on `sampl`
+heatmap(m2,clim=(0,1e-1))
 # maybe use χ2 or maybe directly test for stationarity
 
+function LogSpectralDistance(s1,s2,f)
+    y = @.  10*log10(s1/s2)^2
+    integrate(f,y)^0.5 # maybe divided by f[end]^0.5
+end
 
-# -------------------------------------------------------------
-# -------------------------------------------------------------
-# -------------------------------------------------------------
+m3 = [LogSpectralDistance(tfhm[:,i],tfhm[:,j],f) for i in 1:90,j in 1:90]
+heatmap(m3,clim=(1e1,1.5e1)) #amazing
 
+function RandomSpectra(smean,σ,nsampl)
+    n = length(smean);
+    rs = zeros(n,nsampl)
+    for i in 1:nsampl
+        rs[:,i] = smean + σ.*randn(n);
+    end
+    rs[findall(rs.<0)].=1e-22; # avoid negative powers, this is problematic though
+    return rs;
+end
+
+f_idx, f_tfhm = movfilter(t, tfhm, "pre");
+smean = mean(f_tfhm,dims=2)
+σ = std(f_tfhm,dims=2);
+# σ = findmax(σ)[1]
+rs = RandomSpectra(smean,σ,90);
+mr = [LogSpectralDistance(rs[:,i],rs[:,j],f) for i in 1:90,j in 1:90]
+heatmap(mr) # nice result, but still, maybe surrogates
+# -------------------------------------------------------------
 # -------------------------------------------------------------
 # Create a heatmap of the pre data from 200s to 300s using Multitaper:
 n0=226;

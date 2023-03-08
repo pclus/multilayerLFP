@@ -40,3 +40,27 @@
      diff[Int(floor(i/4))+1,6]=norm(ch3-ch4)
  end
 
+# bandstop filter validation ----------------------------------
+# -------------------------------------------------------------
+rate = 2500.0
+dt = 1 / rate
+t0 = dt
+tf = 900.0
+id = 100
+
+fl="cortex_pre"
+t, chdat = read_channel(id, t0, tf, fl);
+
+bsfilter = digitalfilter(Bandstop(49.95,50.05; fs=rate),Butterworth(1))
+fil = filtfilt(bsfilter, chdat)
+bsfilter2 = digitalfilter(Bandstop(59.95,60.05; fs=rate),Butterworth(1))
+fil = filtfilt(bsfilter2, fil)
+
+NW = 1.0 * length(chdat) * dt / (2.0);  # real bandwith is ω*dt/2.0, and NW = N*ω*dt/2.0
+K = 10;    # number of tappers (should be similar slightly less than 2*NW)
+S = multispec(chdat, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=false);
+S2 = multispec(fil, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=false);
+p1 = plot(S.f, S.S, xlim=(40, 70), ylim=(1e-18, 1e-14), lw=1.0, yaxis=:log)
+plot!(S2.f, S2.S, xlim=(40, 70), ylim=(1e-18, 1e-14), lw=0.5, yaxis=:log)
+# -------------------------------------------------------------
+

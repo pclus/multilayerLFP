@@ -82,12 +82,17 @@ function bandpass_filter(fl) # possibly deprecated
     tf = 900.0
     n = 384
 
-    bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=2500), Butterworth(3))
+    bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=rate), Butterworth(3))
+    # bsfilter  = digitalfilter(Bandstop(49.95,50.05; fs=rate),Butterworth(1))
+    # bsfilter2 = digitalfilter(Bandstop(59.95,60.05; fs=rate),Butterworth(1))
+
     fout = open("../1_data/filtered_" * fl * ".bin", "w")
 
     for id in 0:n-1
         t, ch = read_channel(id, t0, tf, fl)
         fil_ch = filtfilt(bpfilter, ch)
+        # fil_ch = filtfilt(bsfilter, fil_ch)
+        # fil_ch = filtfilt(bsfilter2, fil_ch)
         write(fout, fil_ch)
     end
     close(fout)
