@@ -1,0 +1,118 @@
+\documentclass[ ]{standalone}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+%\usepackage[mathscr]{eucal}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{array}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{float}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage{tikz}
+\usetikzlibrary{tikzmark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{epstopdf}
+\usepackage{latexsym}
+\usepackage{keyval}
+\usepackage{ifthen}
+\usepackage{moreverb}
+%\usepackage{mathastext}
+\usepackage[shell,cleanup,subfolder]{gnuplottex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\definecolor{myBlue}{RGB}{0,84, 159}
+%\usepackage[lmargin=2cm,rmargin=0cm,tmargin=2cm,bmargin=2cm]{geometry}
+\usepackage[pass,paperwidth=8.5in,paperheight=11in]{geometry}
+%\geometry{
+%	paperwidth=30cm,
+%	paperheight=0cm,
+%	margin=2cm
+%}
+
+ \renewcommand{\familydefault}{\sfdefault}
+
+
+\begin{document} 
+%\begin{minipage}{800pt}
+% \hspace{1.5cm}\resizebox{750pt}{!}{\input{pp/diag}}\hspace*{0.550cm}\\[40pt]
+%\end{minipage}
+
+
+\begin{minipage}{12in}
+	\vspace*{0.7cm}
+	\hspace*{1.5cm}
+\begin{gnuplot}[terminal={epslatex},scale=0.9,terminaloptions={color size 12.0,6.0 rounded}]
+        set border lw 2
+        unset grid
+        unset key
+        set loadpath '~/Documents/Data/UPO-tACs/7_results/cortex_heatmaps/'
+	set multiplot layout 2,2 columnsfirst title '\Large \bf Subject 9'
+
+	set rmargin 8
+	set lmargin 8
+
+	# ----------------------------------------------------------------
+	df=0.1
+	set ytics 500
+	set xtics 10
+	set cbrange[1e-23:3e-22]
+
+	set xrange[0:100]
+	
+	dp=3840
+	set yrange[-0.413*dp+10:-0.061*dp]
+
+	set ylabel '\large Depth [$\mu$m] '
+	set xlabel '\large Freq. [Hz]'
+	set cblabel '\large Power'
+	set logs zcb
+	set pale @RAINBOW
+	# set colorbox user origin graph 1.02,0.0 size screen 0.01, graph 1.0
+	set label 1 at graph 0.92,0.9 center '\large \color{white}\bf Pre' front
+	datatype="csd"
+
+	ypos(init,nrow,y)=-dp-(init-y*(20/nrow)) + (1-0.413)*dp
+        init = -14-20
+        ski = 2
+        nrow = 1.0 #/ski
+
+	plot 'psd_mean_tfhm_'.datatype.'_pre.dat' matrix every ski::1 u (df*$2):(ypos(init,nrow,$1)):3 w ima
+	# ----------------------------------------------------------------
+
+	# ----------------------------------------------------------------
+	set label 1 at graph 0.92,0.9 center '\large \color{white}\bf Post' front
+	plot 'psd_mean_tfhm_'.datatype.'_post.dat' matrix every ski::1 u (df*$2):(ypos(init,nrow,$1)):3 w ima
+	unset label 1
+	# ----------------------------------------------------------------
+	
+	# ----------------------------------------------------------------
+	unset logs
+	set cbtics 1e-22
+	set cbrange[-1e-22:1e-22]
+	set cblabel '\large Power difference'
+	set pale @DIVERGING1 negative
+	plot 'psd_'.datatype.'_difference.dat' matrix every ski::1 u (df*$2):(ypos(init,nrow,$1)):3 w ima
+	# ----------------------------------------------------------------
+
+	# ----------------------------------------------------------------
+	unset logs
+	set cbtics autofreq
+	set cbrange[1e-4:1.0]
+	set cblabel '\large $t$-test $p$-value'
+	set log zcb
+
+	#OCEAN = "defined (0.0 '#090979', 0.001 '#090979', 0.001 '#00d4ff',  0.099 '#00d4ff', 0.099 '#ffffff', 0.1 '#ffffff' )"
+	OCEAN = "defined ( 0.0 '#090979', 0.25 '#090979', 0.25 '#5684f0', 0.50 '#5684f0', 0.50 '#00d4ff'  ,0.75 '#00d4ff', 0.75 '#ffffff', 1.0 '#ffffff' )"
+	set pale @OCEAN positive
+	plot 'psd_'.datatype.'_pvals.dat' matrix every ski::1 u (df*$2):(ypos(init,nrow,$1)):3 w ima
+	# ----------------------------------------------------------------
+\end{gnuplot}
+\vspace*{0.7cm}
+\hspace*{3cm}
+\end{minipage}
+\end{document}
