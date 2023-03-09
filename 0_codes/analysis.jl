@@ -13,7 +13,7 @@ nf=361;
 
 # Load time series for a specific channel from second 200 to 300:
 t0 = 100.0;
-tf = 110.0;
+tf = 200.0;
 id = 100;
 fl = "cortex_pre"
 t, chdat = read_channel(id, t0, tf, fl);
@@ -24,6 +24,12 @@ using StatsBase, HypothesisTests
 ν=autocor(chdat,0:10*2500)
 plot(dt*(0:25000),ν,xlim=(0,1.0))
 # ADFTest(chdat, :none, 500) 
+
+
+using SignalAnalysis
+y = tfd(chdat, Wigner(nfft=1024, smooth=10, method=:CM1980, window=hamming),fs=1.0/dt);
+heatmap(y.time,y.freq,log10.(abs2.(y.power)),ylim=(0,200),clim=(-28,-22))
+
 
 # Compute PSD using Multitaper PSD ----------------------------
 rate = 2500.0;
@@ -113,6 +119,10 @@ smean = mean(f_tfhm,dims=2)
 rs = RandomSpectra(smean,σ,90);
 mr = [LogSpectralDistance(rs[:,i],rs[:,j],f) for i in 1:90,j in 1:90]
 heatmap(mr) # nice result, but still, maybe surrogates
+
+
+
+
 # -------------------------------------------------------------
 # -------------------------------------------------------------
 # Create a heatmap of the pre data from 200s to 300s using Multitaper:
