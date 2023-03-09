@@ -26,11 +26,6 @@ plot(dt*(0:25000),ν,xlim=(0,1.0))
 # ADFTest(chdat, :none, 500) 
 
 
-using SignalAnalysis
-y = tfd(chdat, Wigner(nfft=1024, smooth=10, method=:CM1980, window=hamming),fs=1.0/dt);
-heatmap(y.time,y.freq,log10.(abs2.(y.power)),ylim=(0,200),clim=(-28,-22))
-
-
 # Compute PSD using Multitaper PSD ----------------------------
 rate = 2500.0;
 dt = 1.0 / rate;
@@ -121,6 +116,57 @@ mr = [LogSpectralDistance(rs[:,i],rs[:,j],f) for i in 1:90,j in 1:90]
 heatmap(mr) # nice result, but still, maybe surrogates
 
 
+# -------------------------------------------------------------
+# -------------------------------------------------------------
+path="/home/pclusella/Documents/Data/UPO-tACs/7_results/cortex_heatmaps/"
+lfp = readdlm(path*"psd_mean_tfhm_cortex_pre.dat")
+blfp = readdlm(path*"psd_mean_tfhm_bipolar_pre.dat")
+csd = readdlm(path*"psd_mean_tfhm_csd_pre.dat")
+kcsd = readdlm(path*"psd_mean_tfhm_kcsd_pre.dat")
+freqs = 0.0:0.1:199.9
+
+function relative_power(fhm,freqs)
+    df = freqs[2]-freqs[1]
+    n = size(fhm)[2]
+    αband = findall(@. f>4.0 && f<22)
+    γband = findall(@. f>35.0 && f<60)
+    α = zeros(n)
+    γ = zeros(n)
+    for i in 1:n
+        α[i] = mean(fhm[αband,i])*df # take the sum instead of the mean to get the area
+        γ[i] = mean(fhm[γband,i])*df
+    end
+
+    return α,γ
+end
+
+α1,γ1 = relative_power(lfp,freqs)
+α2,γ2 = relative_power(blfp,freqs)
+α3,γ3 = relative_power(csd,freqs)
+α4,γ4 = relative_power(kcsd,freqs)
+
+dp1 = depth("lfp",size(lfp)[2])
+dp2 = depth("blfp",size(blfp)[2])
+dp3 = depth("csd",size(csd)[2])
+dp4 = depth("kcsd",size(kcsd)[2])
+
+plot(dp1[1:4:end],(α1./γ1)[1:4:end],lc=1)
+plot!(dp2[1:4:end],(α2./γ2)[1:4:end],lc=2)
+plot!(dp3[2:2:end],(α3./γ3)[2:2:end],lc=3)
+plot!(dp4,α4./γ4,lc=4)
+
+
+plot((α1)[1:4:end]/maximum(α1[1:4:end]),dp1[1:4:end],lc=1)
+plot!((γ1)[1:4:end]/maximum(γ1[1:4:end]),dp1[1:4:end],lc=2)
+
+plot((α2)[1:4:end]/maximum(α2[1:4:end]),dp2[1:4:end],lc=1)
+plot!((γ2)[1:4:end]/maximum(γ2[1:4:end]),dp2[1:4:end],lc=2)
+
+plot((α3)[2:2:end]/maximum(α3[2:2:end]),dp3[2:2:end],lc=1)
+plot!((γ3)[2:2:end]/maximum(γ3[2:2:end]),dp3[2:2:end],lc=2)
+
+plot(α4/maximum(α4),dp4,lc=1)
+plot!(γ4/maximum(γ4),dp4,lc=2)
 
 
 # -------------------------------------------------------------

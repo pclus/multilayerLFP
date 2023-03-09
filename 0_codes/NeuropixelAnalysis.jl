@@ -382,5 +382,22 @@ end
 #     test = EqualVarianceTTest.(nx,ny,A,B,sA,sB)
 # end
 
+ypos(y,skip,nrow,dp,dist) = -0.413*dp + (skip + floor((y-1)/nrow))*dist
+
+function depth(type,n)
+    dp = 3840
+    if type=="lfp"
+        return ypos.(1:n, 0, 2, dp, 20)
+    elseif type=="blfp"
+        return ypos.(1:n, 2, 2, dp, 20)
+    elseif type=="csd"
+        return ypos.(1:n, 1, 1, dp, 20)
+    elseif type=="kcsd"
+        return ypos.(1:n, 0, 1, dp, 10)
+    else
+        print("Unkown data type "*type*"\n")
+    end
+end
+
 
 end # module
