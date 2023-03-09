@@ -382,6 +382,67 @@ end
 #     test = EqualVarianceTTest.(nx,ny,A,B,sA,sB)
 # end
 
+"""
+    prepost_analysis(n0,nf)
+
+Compute the mean spectra and perform comparison between pre and post for all datatypes.
+"""
+function prepost_analysis(n0,nf)
+    l = 2000;
+    n=size(n0:nf)[1]
+    ns=[ n, n, n/2-2,n-4]
+    ns=Int.(ns)
+
+    for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_"))
+        n0=ns[i];
+
+        psd_mean_tfhm_pre = zeros(n0, l);
+        psd_std_tfhm_pre = zeros(n0, l);
+        psd_mean_tfhm_post = zeros(n0, l);
+        psd_std_tfhm_post = zeros(n0, l);
+        pvals_tfhm = zeros(n0, l);
+        pvals_uneq_tfhm = zeros(n0, l);
+
+        state = Threads.Atomic{Int}(0);
+
+        Threads.@threads for id in 0:n0-1
+
+            # Prompt state
+            Threads.atomic_add!(state, 1)
+            print("--> ", state[], " out of ", n0, "\n")
+            flush(stdout)
+
+            # Pre
+            t, f, tfhm = timefreq(id, data*"pre")
+            idx, f_pre = movfilter(t, tfhm, "pre")
+            psd_mean_tfhm_pre[id+1, :] = mean(f_pre, dims=2)
+            psd_std_tfhm_pre[id+1, :] = std(f_pre, dims=2)
+
+            # Post
+            t, f, tfhm = timefreq(id, data*"post")
+            idx, f_post = movfilter(t, tfhm, "post")
+            psd_mean_tfhm_post[id+1, :] = mean(f_post, dims=2)
+            psd_std_tfhm_post[id+1, :] = std(f_post, dims=2)
+
+            # T-test. 
+            for j in 1:l
+                pvals_uneq_tfhm[id+1, j] = pvalue(UnequalVarianceTTest(f_pre[j, :], f_post[j, :]))
+                pvals_tfhm[id+1, j] = pvalue(EqualVarianceTTest(f_pre[j, :], f_post[j, :]))# can be computed from the means
+            end
+        end
+
+        writedlm("../4_outputs/psd_mean_tfhm_"*data*"pre.dat", psd_mean_tfhm_pre', ' ');
+        writedlm("../4_outputs/psd_std_tfhm_"*data*"pre.dat", psd_std_tfhm_pre', ' ');
+        writedlm("../4_outputs/psd_mean_tfhm_"*data*"post.dat", psd_mean_tfhm_post', ' ');
+        writedlm("../4_outputs/psd_std_tfhm_"*data*"post.dat", psd_std_tfhm_post', ' ');
+        writedlm("../4_outputs/psd_"*data*"pvals_eq.dat", pvals_tfhm', ' ');
+        writedlm("../4_outputs/psd_"*data*"pvals.dat", pvals_uneq_tfhm', ' ');
+        writedlm("../4_outputs/psd_"*data*"difference.dat", (psd_mean_tfhm_post - psd_mean_tfhm_pre)', ' ');
+    end
+end
+
+
+# skip: number of rows to skip; nrow = number of channels per row
 ypos(y,skip,nrow,dp,dist) = -0.413*dp + (skip + floor((y-1)/nrow))*dist
 
 function depth(type,n)
@@ -399,5 +460,37 @@ function depth(type,n)
     end
 end
 
+
+
+function relative_power(fhm,freqs)
+    df = freqs[2]-freqs[1]
+    n = size(fhm)[2]
+    αband = findall(@. f>4.0 && f<22)
+    γband = findall(@. f>35.0 && f<58)
+    α = zeros(n)
+    γ = zeros(n)
+    for i in 1:n
+        α[i] = mean(fhm[αband,i])*df # take the sum instead of the mean to get the area
+        γ[i] = mean(fhm[γband,i])*df
+    end
+
+    return α,γ
+end
+
+
+function load_precomputed()
+    path="/home/pclusella/Documents/Data/UPO-tACs/7_results/cortex_heatmaps/"
+    condition = "pre"
+    lfp_pre = readdlm(path*"psd_mean_tfhm_cortex_"*condition*".dat")
+    blfp_pre = readdlm(path*"psd_mean_tfhm_bipolar_"*condition*".dat")
+    csd_pre = readdlm(path*"psd_mean_tfhm_csd_"*condition*".dat")
+    kcsd_pre = readdlm(path*"psd_mean_tfhm_kcsd_"*condition*".dat")
+
+    condition = "post"
+    lfp_post = readdlm(path*"psd_mean_tfhm_cortex_"*condition*".dat")
+    blfp_post = readdlm(path*"psd_mean_tfhm_bipolar_"*condition*".dat")
+    csd_post = readdlm(path*"psd_mean_tfhm_csd_"*condition*".dat")
+    kcsd_post = readdlm(path*"psd_mean_tfhm_kcsd_"*condition*".dat")
+end
 
 end # module
