@@ -46,6 +46,7 @@ for (i,condition) in enumerate(["pre","post"])
     plot(α4/maximum(α4),dp4,lc=1)
     p[4,i] = plot!(γ4/maximum(γ4),dp4,lc=2)
 end
-# plot(p[5,1],p[5,2],layout=(1,2),ylim=(0,12.0))
-# plot(p[4,1],p[4,2],layout=(1,2))
+
+plot(p[5,1],p[5,2],layout=(1,2),ylim=(0,12.0))
+plot(p[1,1],p[1,2],layout=(1,2))
 

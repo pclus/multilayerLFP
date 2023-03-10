@@ -6,11 +6,45 @@ using NeuropixelAnalysis,SpectralAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics;
 # plotlyjs()
 
-# load_precomputed();
+
+# lfp_pre,blfp_pre,csd_pre,kcsd_pre,lfp_post,blfp_post,csd_post,kcsd_post = NeuropixelAnalysis.load_precomputed() ;
+# spectra = [ lfp_pre,blfp_pre,csd_pre,kcsd_pre,lfp_post,blfp_post,csd_post,kcsd_post ]
+spectra = NeuropixelAnalysis.load_precomputed() ;
+spectra_std = NeuropixelAnalysis.load_precomputed_std()
+
+##
+nspectra=copy(spectra).*0;
+nspectra_std=copy(spectra_std).*0;
+dists=
+for k in 1:8
+    for i in 1:size(spectra[k])[2]
+        nspectra[k][:,i]=spectra[k][:,i]./mean(spectra[k][:,i])
+        nspectra_std[k][:,i]=spectra_std[k][:,i]./mean(spectra[k][:,i])
+    end
+        
+end
+##
+heatmap(((nspectra[4]-nspectra[8])'),clim=(-5,5),xlim=(0,1000),c=:bwr)
+
+Sp=pvalue.(EqualVarianceTTest.(82, 67, nspectra[4], nspectra[8],
+     nspectra_std[4].^2,nspectra_std[8].^2))
+
+heatmap(log10.(p'),clim=(-4,0),xlim=(0,1000))
+
+n=[ size(spectra[i])[2] for i in 1:8]
+dists=[ zeros(n[i]) for i in 1:4]
+for k=1:4
+    for i in 1:size(spectra[k])[2]
+        dists[k][i]=SpectralAnalysis.logspectral_dist(nspectra[k][:,i],nspectra[k+4][:,i],2.0)
+    end
+end
+plot(dists[:])
 
 id=100; fl="pre"
 t, f, tfhm = timefreq_complete(id, fl);
 m = [logspectral_dist(tfhm[:,i],tfhm[:,j],f) for i in 1:90,j in 1:90]
+
+
 heatmap(m,clim=(0.2,0.45)) #amazing
 
 

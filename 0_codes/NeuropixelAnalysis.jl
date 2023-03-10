@@ -3,7 +3,7 @@ module NeuropixelAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP,Statistics;
 
 export DelimitedFiles, Multitaper, Plots, DSP,Statistics
-export read_channel,channel_idx,heatmapMT,timefreq,movfilter,heatmap_segments, process_data
+export read_channel,channel_idx,heatmapMT,timefreq,movfilter,heatmap_segments, process_data,relative_power,depth
 
 """
     read_channel(id, t0, tf, fl)
@@ -460,13 +460,11 @@ function depth(type,n)
     end
 end
 
-
-
 function relative_power(fhm,freqs)
     df = freqs[2]-freqs[1]
     n = size(fhm)[2]
-    αband = findall(@. f>4.0 && f<22)
-    γband = findall(@. f>35.0 && f<58)
+    αband = findall(@. freqs>4.0 && freqs<22)
+    γband = findall(@. freqs>35.0 && freqs<58)
     α = zeros(n)
     γ = zeros(n)
     for i in 1:n
@@ -491,6 +489,26 @@ function load_precomputed()
     blfp_post = readdlm(path*"psd_mean_tfhm_bipolar_"*condition*".dat")
     csd_post = readdlm(path*"psd_mean_tfhm_csd_"*condition*".dat")
     kcsd_post = readdlm(path*"psd_mean_tfhm_kcsd_"*condition*".dat")
+
+    return [lfp_pre,blfp_pre,csd_pre,kcsd_pre,lfp_post,blfp_post,csd_post,kcsd_post]
+end
+
+# not exported
+function load_precomputed_std()
+    path="/home/pclusella/Documents/Data/UPO-tACs/7_results/cortex_heatmaps/"
+    condition = "pre"
+    lfp_pre = readdlm(path*"psd_std_tfhm_cortex_"*condition*".dat")
+    blfp_pre = readdlm(path*"psd_std_tfhm_bipolar_"*condition*".dat")
+    csd_pre = readdlm(path*"psd_std_tfhm_csd_"*condition*".dat")
+    kcsd_pre = readdlm(path*"psd_std_tfhm_kcsd_"*condition*".dat")
+
+    condition = "post"
+    lfp_post = readdlm(path*"psd_std_tfhm_cortex_"*condition*".dat")
+    blfp_post = readdlm(path*"psd_std_tfhm_bipolar_"*condition*".dat")
+    csd_post = readdlm(path*"psd_std_tfhm_csd_"*condition*".dat")
+    kcsd_post = readdlm(path*"psd_std_tfhm_kcsd_"*condition*".dat")
+
+    return [lfp_pre,blfp_pre,csd_pre,kcsd_pre,lfp_post,blfp_post,csd_post,kcsd_post]
 end
 
 end # module
