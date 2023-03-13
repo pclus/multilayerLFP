@@ -3,77 +3,37 @@
 push!(LOAD_PATH, "/home/pclusella/Documents/Data/UPO-tACs/0_codes/")
 cd("/home/pclusella/Documents/Data/UPO-tACs/0_codes/")
 using NeuropixelAnalysis,SpectralAnalysis
-using DelimitedFiles, Multitaper, Plots, DSP, Statistics;
+using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 # plotlyjs()
 
-
-# lfp_pre,blfp_pre,csd_pre,kcsd_pre,lfp_post,blfp_post,csd_post,kcsd_post = NeuropixelAnalysis.load_precomputed() ;
-# spectra = [ lfp_pre,blfp_pre,csd_pre,kcsd_pre,lfp_post,blfp_post,csd_post,kcsd_post ]
-spectra = NeuropixelAnalysis.load_precomputed() ;
-spectra_std = NeuropixelAnalysis.load_precomputed_std()
+# spectra = NeuropixelAnalysis.load_precomputed() ;
+# spectra_std = NeuropixelAnalysis.load_precomputed_std()
 
 # Plain permutation test [to be incorporated in the module]-------------
-t, f, tfhm = timefreq(id, data*"pre")
-idx, f_pre = movfilter(t, tfhm, "pre")
+id = 100
+data = "cortex_"
+ts, f, tfhm = timefreq(id, data*"pre")
+idx, f_pre = movfilter(ts, tfhm, "pre")
 
-t, f, tfhm = timefreq(id, data*"post")
-idx, f_post = movfilter(t, tfhm, "post")
+t,ch = read_channel(id,1/2500.0,900,data*"pre")
 
-plot([f_pre[100,:],f_post[100,:]])
+heatmap(ts,f,log10.(tfhm),c=:rainbow1,clim=(-17,-15))
 
-l=2000
-ps=[ pvalue(ApproximatePermutationTest(f_pre[i,:],f_post[i,:],mean,1000)) for i in 1:l]
-# ----------------------------------------------------------------------
-
-# ----------------------------------------------------------------------
-# ----------------------------------------------------------------------
-# ----------------------------------------------------------------------
-# ----------------------------------------------------------------------
-# Try cluster-based permutation test
-function welch_statistic(x,y) # degrees of freedom depend on the variances...
-    nx=length(x); ny=length(y);
-    μx=mean(x); μy=mean(y);
-    σx=std(x); σy=std(y);
-    d = σx^2/nx + σy^2/ny
-    tw = (μx-μy)/sqrt(d)
-
-    sx = (σx^2/nx)^2/(nx-1) ; sy = (σy^2/ny)^2/(ny-1)
-    df = d^2/(sx+sy)
-    return tw, df
-end
+writedlm("../4_outputs/tfhm.dat",tfhm," ")
+writedlm("../4_outputs/chdat.dat",[t ch]," ")
 
 
-id=100; data="cortex_";
-t, f, tfhm = timefreq(id, data*"pre");
-idx, f_pre = movfilter(t, tfhm, "pre");
-
-t, f, tfhm = timefreq(id, data*"post");
-idx, f_post = movfilter(t, tfhm, "post");
-
-plot([f_pre[100,:],f_post[100,:]])
-
-l=2000
-ps=[ pvalue(UnequalVarianceTTest(f_pre[i,:],f_post[i,:])) for i in 1:l]
-
-pss = @. (ps<0.05) 
-
-ncluster = 0
-cluster  = 0
-for i in 1:l
-    if ps[i]<0.05 && cluster==0
-        ncluster+=1
-    end
-    cluster = (ps[i]<0.05 ? ncluster : 0) 
-    cluster_list[i] = cluster
-end
-# sum ts of each cluster
-# randomize and compute p-value (use chuncks of hypothesis test packg)
-
-
-# ----------------------------------------------------------------------
-# ----------------------------------------------------------------------
-# ----------------------------------------------------------------------
-# ----------------------------------------------------------------------
+m = [logspectral_dist(tfhm[:,i],tfhm[:,j],f) for i in 1:90,j in 1:90]
+mf = [logspectral_dist(f_pre[:,i],f_pre[:,j],f) for i in 1:82,j in 1:82]
+using LaTeXStrings
+heatmap(m,aspect_ratio=:equal,xlim=(0.5,90.5),ylim=(0.5,90.5),c=:afmhot,
+xlabel="Time segment "*L"i",
+ylabel="Time segment "*L"j",
+colorbar_title="\nlog-spectral dist. "*L"d(S_i,S_j)")
+heatmap(mf,aspect_ratio=:equal,xlim=(0.5,82.5),ylim=(0.5,82.5),c=:afmhot,
+xlabel="Time segment "*L"i",
+ylabel="Time segment "*L"j",
+colorbar_title="\nlog-spectral dist. "*L"d(S_i,S_j)")
 
 ##
 nspectra=copy(spectra).*0;
@@ -108,7 +68,7 @@ t, f, tfhm = timefreq_complete(id, fl);
 m = [logspectral_dist(tfhm[:,i],tfhm[:,j],f) for i in 1:90,j in 1:90]
 
 
-heatmap(m,clim=(0.2,0.45)) #amazing
+heatmap(m,clim=(0.0,0.45)) #amazing
 
 
 f_idx, f_tfhm = movfilter(t, tfhm, "pre");
@@ -145,35 +105,4 @@ plot([rs[:,1],tfhm[:,2],smean],yaxis=:log)
 
 plot([abs2.(Fr),S.S,smean],yaxis=:log)
 
-function timefreq_complete(id, fl)
 
-    rate = 2500.0
-    dt = 1.0 / rate
-    n = 384
-    Δt = 10.0      # segment duration (10 seconds)
-    ns = Int(900.0 / Δt)  # number of segments
-    m = Int(2250000 / ns) # segments of 10 seconds
-    mh = m/2;       # length of the MT spectra...
-    l = Int(mh)       # but...up to l is enough to get the relevant freqs
-    NW = 1.0 * m * dt / (2.0)
-    K = 8
-    t, chdat = read_channel(id, 4e-4, 900, fl)    # time series starts at 4e-4
-
-
-    tfhm = zeros(l, ns)   # time-freq heatmap
-    local S    # so that S exists outside the loop
-    for s in 1:ns
-        segdat = chdat[((s-1)*m+1):s*m]
-        S = multispec(segdat, dt=dt, NW=NW, K=K)
-        tfhm[:, s] = S.S[1:l]
-        if s % 5 == 0
-            print(s, "\r")
-            flush(stdout)
-        end
-    end
-
-    freqs = collect(S.f[1:l])
-    times = collect(5:10:900)
-
-    times, freqs, tfhm
-end

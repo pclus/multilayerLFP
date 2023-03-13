@@ -1,9 +1,10 @@
 module NeuropixelAnalysis
 
-using DelimitedFiles, Multitaper, Plots, DSP,Statistics;
+using DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTests
 
-export DelimitedFiles, Multitaper, Plots, DSP,Statistics
-export read_channel,channel_idx,heatmapMT,timefreq,movfilter,heatmap_segments, process_data,relative_power,depth
+export DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTest
+export read_channel,channel_idx,heatmapMT,timefreq,movfilter,heatmap_segments,
+process_data,relative_power,depth,prepost_analysis
 
 """
     read_channel(id, t0, tf, fl)
@@ -56,13 +57,16 @@ function cut_cortex(fl,n0,nf)
     t0 = dt
     tf = 900.0
 
-    bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=2500), Butterworth(3))
+    # bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=2500), Butterworth(3))
+    # bsfilter = digitalfilter(Bandstop(49.95,50.05; fs=rate),Butterworth(1))
+
     fout = open("../1_data/cortex_" * fl * ".bin", "w")
 
     for id in n0:nf
-        t, ch = read_channel(id, t0, tf, fl)
-        fil_ch = filtfilt(bpfilter, ch)
-        write(fout, fil_ch)
+        t, ch = read_channel(id, t0, tf, "filtered_"*fl)
+        # fil_ch = filtfilt(bpfilter, ch)
+        # fil_ch = filtfilt(bsfilter, fil_ch)
+        write(fout, ch)
     end
     close(fout)
 end
@@ -75,7 +79,7 @@ Bandpass filter all data from binary file referenced by `fl` between 1 and 300Hz
 Uses a Butterworth filter of order 3 and it stores it in a new binary file 
 named `../1_data/filtered_...`.
 """
-function bandpass_filter(fl) # possibly deprecated
+function bandpass_filter(fl) 
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
@@ -83,16 +87,16 @@ function bandpass_filter(fl) # possibly deprecated
     n = 384
 
     bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=rate), Butterworth(3))
-    # bsfilter  = digitalfilter(Bandstop(49.95,50.05; fs=rate),Butterworth(1))
-    # bsfilter2 = digitalfilter(Bandstop(59.95,60.05; fs=rate),Butterworth(1))
+    bsfilter  = digitalfilter(Bandstop(49.95,50.05; fs=rate),Butterworth(1))
+    bsfilter2 = digitalfilter(Bandstop(59.95,60.05; fs=rate),Butterworth(1))
 
     fout = open("../1_data/filtered_" * fl * ".bin", "w")
 
     for id in 0:n-1
         t, ch = read_channel(id, t0, tf, fl)
         fil_ch = filtfilt(bpfilter, ch)
-        # fil_ch = filtfilt(bsfilter, fil_ch)
-        # fil_ch = filtfilt(bsfilter2, fil_ch)
+        fil_ch = filtfilt(bsfilter, fil_ch)
+        fil_ch = filtfilt(bsfilter2, fil_ch)
         write(fout, fil_ch)
     end
     close(fout)
@@ -325,6 +329,8 @@ end
 """
 function process_data(n0,nf)
     n=length(n0:nf)
+    bandpass_filter("pre")
+    bandpass_filter("post")
     cut_cortex("pre",n0,nf)
     cut_cortex("post",n0,nf)
     compute_bipolar("cortex_pre","bipolar_pre",n)   
@@ -390,10 +396,10 @@ Compute the mean spectra and perform comparison between pre and post for all dat
 function prepost_analysis(n0,nf)
     l = 2000;
     n=size(n0:nf)[1]
-    ns=[ n, n, n/2-2,n-4]
+    ns=[ n, n, n/2-2,n-4,384]
     ns=Int.(ns)
 
-    for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_"))
+    for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
         n0=ns[i];
 
         psd_mean_tfhm_pre = zeros(n0, l);
@@ -402,6 +408,7 @@ function prepost_analysis(n0,nf)
         psd_std_tfhm_post = zeros(n0, l);
         pvals_tfhm = zeros(n0, l);
         pvals_uneq_tfhm = zeros(n0, l);
+        pvals_perm_tfhm = zeros(n0, l);
 
         state = Threads.Atomic{Int}(0);
 
@@ -428,6 +435,7 @@ function prepost_analysis(n0,nf)
             for j in 1:l
                 pvals_uneq_tfhm[id+1, j] = pvalue(UnequalVarianceTTest(f_pre[j, :], f_post[j, :]))
                 pvals_tfhm[id+1, j] = pvalue(EqualVarianceTTest(f_pre[j, :], f_post[j, :]))# can be computed from the means
+                pvals_perm_tfhm[id+1,j] = pvalue(ApproximatePermutationTest(f_pre[j, :], f_post[j, :], mean, 1000))
             end
         end
 
@@ -437,6 +445,7 @@ function prepost_analysis(n0,nf)
         writedlm("../4_outputs/psd_std_tfhm_"*data*"post.dat", psd_std_tfhm_post', ' ');
         writedlm("../4_outputs/psd_"*data*"pvals_eq.dat", pvals_tfhm', ' ');
         writedlm("../4_outputs/psd_"*data*"pvals.dat", pvals_uneq_tfhm', ' ');
+        writedlm("../4_outputs/psd_"*data*"pvals.dat", pvals_perm_tfhm', ' ');
         writedlm("../4_outputs/psd_"*data*"difference.dat", (psd_mean_tfhm_post - psd_mean_tfhm_pre)', ' ');
     end
 end
@@ -510,5 +519,39 @@ function load_precomputed_std()
 
     return [lfp_pre,blfp_pre,csd_pre,kcsd_pre,lfp_post,blfp_post,csd_post,kcsd_post]
 end
+
+function timefreq_complete(id, fl)
+
+    rate = 2500.0
+    dt = 1.0 / rate
+    n = 384
+    Δt = 10.0      # segment duration (10 seconds)
+    ns = Int(900.0 / Δt)  # number of segments
+    m = Int(2250000 / ns) # segments of 10 seconds
+    mh = m/2;       # length of the MT spectra...
+    l = Int(mh)       # but...up to l is enough to get the relevant freqs
+    NW = 1.0 * m * dt / (2.0)
+    K = 8
+    t, chdat = read_channel(id, 4e-4, 900, fl)    # time series starts at 4e-4
+
+
+    tfhm = zeros(l, ns)   # time-freq heatmap
+    local S    # so that S exists outside the loop
+    for s in 1:ns
+        segdat = chdat[((s-1)*m+1):s*m]
+        S = multispec(segdat, dt=dt, NW=NW, K=K)
+        tfhm[:, s] = S.S[1:l]
+        if s % 5 == 0
+            print(s, "\r")
+            flush(stdout)
+        end
+    end
+
+    freqs = collect(S.f[1:l])
+    times = collect(5:10:900)
+
+    times, freqs, tfhm
+end
+
 
 end # module

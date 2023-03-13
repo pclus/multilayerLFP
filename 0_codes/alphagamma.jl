@@ -5,7 +5,7 @@ cd("/home/pclusella/Documents/Data/UPO-tACs/0_codes/")
 using NeuropixelAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics;
 # plotlyjs()
-
+gr()
 
 path="/home/pclusella/Documents/Data/UPO-tACs/7_results/cortex_heatmaps/"
 condition = "post"
@@ -48,5 +48,7 @@ for (i,condition) in enumerate(["pre","post"])
 end
 
 plot(p[5,1],p[5,2],layout=(1,2),ylim=(0,12.0))
-plot(p[1,1],p[1,2],layout=(1,2))
+plot(p[1,1],p[1,2],layout=(1,2),labels=["α" "γ"],
+xlabel = "Relative power",
+ylabel = "Depth [μm]",title=["pre" "post"])
 
