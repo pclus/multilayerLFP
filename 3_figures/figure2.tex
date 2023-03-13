@@ -50,7 +50,7 @@
         set border lw 2
         unset grid
         unset key
-        set loadpath '~/Documents/Data/UPO-tACs/7_results/data-overview/' '~/Documents/Data/UPO-tACs/7_results/time-frequency/' '~/Documents/Data/UPO-tACs/1_Raw/' '~/Documents/Data/UPO-tACs/7_results/time-frequency/kmeans/'
+        set loadpath '~/Documents/Data/UPO-tACs/7_results/data-overview/'  '~/Documents/Data/UPO-tACs/1_data/'
 
 	set multiplot layout 2,2 columnsfirst
 	set ytics 1e-6
@@ -62,7 +62,7 @@
 	set ylabel '\large LFP [V]'
 	set xlabel '\large $t$ [s]'
 	set yrange[-1.5e-6:1.5e-6]
-	plot 'mov_pre.dat' u 1:(-2e-6):(0):(4e-6) w vectors nohead lc 'gray' , 'ch150.dat' ev 10 u 1:2 w l lc 1 lw 0.2
+	plot 'mov_pre.dat' u 1:(-2e-6):(0):(4e-6) w vectors nohead lc 'gray' , 'chdat100.dat' ev 10 u 1:2 w l lc 1 lw 0.2
 	# ----------------------------------------------------------------
 
 	# ----------------------------------------------------------------
@@ -79,48 +79,10 @@
 
 	set lt 2 lc 'green'
 	set lt 1 lc 'red'
-	plot 'ch150_tfhm.dat' mat u (5+10*$1):(df*$2):3 w ima,\
-		'mov_pre.dat' u (floor($1/10)*10+5):(79):(9) w p pt 5 ps 1.9 lc var,\
-		'km_ch150_idx_pre.dat' u 1:(79):($2==1 ? 1 : 2) w p pt 5 ps 1.9 lc var,\
+	plot 'tfhm100.dat' mat u (5+10*$1):(df*$2):3 w ima,\
+		'mov_pre.dat' u (floor($1/10)*10+5):(79):(9) w p pt 5 ps 1.9 lc var
 	# ----------------------------------------------------------------
 
-	# ----------------------------------------------------------------
-	set size 0.3,0.5
-	set origin 0.6,0.5
-	set yrange[1e-17:5e-15]
-	set xrange[0:80]
-	set ytics autofreq
-	#set ytics 1e-15
-	set log y
-	set key nobox top right
-	s1=27
-	s2=55
-	unset key 
-	set ylabel '\large Power '
-	set xlabel '\large Freq. [Hz]'
-	plot 'km_ch150_pvals_pre.dat' u ($0*df):($1<1e-3 ? 5e-15 : NaN) w impulses lc 'cyan',\
-		for[k=1:s1] 'km_ch150_tfhm_k1_pre.dat' u ($0*df):k w l lw 0.01 lc '#ff9494',\
-		for[k=1:s2] 'km_ch150_tfhm_k2_pre.dat' u ($0*df):k w l lw 0.01 lc '#94ff94',\
-		'km_ch150_centers_pre.dat' u ($0*df):1 w l lc 1,\
-		'km_ch150_centers_pre.dat' u ($0*df):2 w l lc 3,\
-
-	# ----------------------------------------------------------------
-
-	# ----------------------------------------------------------------
-	set size 0.3,0.5
-	set origin 0.6,0.0
-	set cbrange[1e-4:1.0]
-	unset logscale 
-	set xrange[0:80]
-	set yrange[0:384]
-	set log zcb
-	set ylabel '\large Channel '
-	set xlabel '\large Freq. [Hz]'
-	set cblabel '\large $t$-test $p$-value'
-        set pale defined ( 0.0 '#090979', 0.25 '#090979', 0.25 '#00d4ff',  0.75 '#00d4ff', 0.75 '#ffffff', 1.0 '#ffffff' ) positive
-	plot 'km_pvals_pre.dat' mat u ($1*df):2:3 w ima
-
-	## ----------------------------------------------------------------
 	
 \end{gnuplot}
 \end{minipage}
