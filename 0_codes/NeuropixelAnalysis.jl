@@ -87,8 +87,8 @@ function bandpass_filter(fl)
     n = 384
 
     bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=rate), Butterworth(3))
-    bsfilter  = digitalfilter(Bandstop(49.95,50.05; fs=rate),Butterworth(1))
-    bsfilter2 = digitalfilter(Bandstop(59.95,60.05; fs=rate),Butterworth(1))
+    bsfilter  = digitalfilter(Bandstop(49.9,50.1; fs=rate),Butterworth(1))
+    bsfilter2 = digitalfilter(Bandstop(59.9,60.1; fs=rate),Butterworth(1))
 
     fout = open("../1_data/filtered_" * fl * ".bin", "w")
 
@@ -399,7 +399,8 @@ function prepost_analysis(n0,nf)
     ns=[ n, n, n/2-2,n-4,384]
     ns=Int.(ns)
 
-    for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
+    # for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
+    for (i,data) in enumerate(("kcsd_",))
         n0=ns[i];
 
         psd_mean_tfhm_pre = zeros(n0, l);
@@ -445,7 +446,7 @@ function prepost_analysis(n0,nf)
         writedlm("../4_outputs/psd_std_tfhm_"*data*"post.dat", psd_std_tfhm_post', ' ');
         writedlm("../4_outputs/psd_"*data*"pvals_eq.dat", pvals_tfhm', ' ');
         writedlm("../4_outputs/psd_"*data*"pvals.dat", pvals_uneq_tfhm', ' ');
-        writedlm("../4_outputs/psd_"*data*"pvals.dat", pvals_perm_tfhm', ' ');
+        writedlm("../4_outputs/psd_"*data*"pvals_perm.dat", pvals_perm_tfhm', ' ');
         writedlm("../4_outputs/psd_"*data*"difference.dat", (psd_mean_tfhm_post - psd_mean_tfhm_pre)', ' ');
     end
 end
@@ -473,7 +474,7 @@ function relative_power(fhm,freqs)
     df = freqs[2]-freqs[1]
     n = size(fhm)[2]
     αband = findall(@. freqs>4.0 && freqs<22)
-    γband = findall(@. freqs>35.0 && freqs<58)
+    γband = findall(@. freqs>32.0 && freqs<48.0)
     α = zeros(n)
     γ = zeros(n)
     for i in 1:n

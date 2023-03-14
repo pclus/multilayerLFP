@@ -6,8 +6,25 @@ using NeuropixelAnalysis,SpectralAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 # plotlyjs()
 
+id=220
+t,chdat = read_channel(id,200.0,210.0,"pre")
+t,chf = read_channel(id,200.0,210.0,"filtered_pre")
+rate = 2500.0;
+dt = 1.0 / rate;
+NW = 1.0 * length(chdat) * dt / (2.0);  
+K = 10;   
+S = multispec(chdat, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=false);
+Sf = multispec(chf, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=false);
+p1 = plot(S.f, S.S, xlim=(0, 205), ylim=(1e-18, 1e-14), lw=2.0, yaxis=:log,
+xlabel="Freq. [Hz]",ylabel="Power [mV²]",labels=["raw" "filtered"])
+plot!(Sf.f,Sf.S,lw=1,xlabel="Freq. [Hz]",ylabel="Power [mV²]",labels=["raw" "filtered"])
+
+
+
 # spectra = NeuropixelAnalysis.load_precomputed() ;
 # spectra_std = NeuropixelAnalysis.load_precomputed_std()
+ts, f, tfhm = timefreq(id, data*"pre")
+
 
 # Plain permutation test [to be incorporated in the module]-------------
 id = 100
