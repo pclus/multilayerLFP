@@ -11,7 +11,7 @@ t,chdat = read_channel(id,200.0,201.0,"filtered_pre")
 rate = 2500.0;
 dt = 1.0 / rate;
 NW = 1.0 * length(chdat) * dt / (2.0);  
-K = 10;   
+K = 8;   
 S = multispec(chdat, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=false);
 p1 = plot(S.f, S.S, xlim=(0, 205), ylim=(1e-18, 1e-14), lw=2.0, yaxis=:log,
 xlabel="Freq. [Hz]",ylabel="Power [mV²]")
@@ -24,22 +24,23 @@ n = 384
 ns = Int(900.0 / Δt)  # number of segments
 m = Int(2250000 / ns) # segments of 10 seconds
 # mh = m/2;       # length of the MT spectra...
-l = 2000       # but...up to l is enough to get the relevant freqs
+l = 1000       # but...up to l is enough to get the relevant freqs
 NW = 1.0 * m * dt / (2.0)
 K = 8
 t, chdat = read_channel(id, 4e-4, 900, "filtered_pre")    # time series starts at 4e-4
 
-tfhm = zeros(l, ns)   # time-freq heatmap
-local S    # so that S exists outside the loop
-for s in 1:ns
-    segdat = chdat[((s-1)*m+1):s*m]
-    S = multispec(segdat, dt=dt, NW=NW, K=K)
-    tfhm[:, s] = S.S[1:l]
-    if s % 5 == 0
-        print(s, "\r")
-        flush(stdout)
+tfhm = zeros(l,9000);   
+for s in 5:8995
+    segdat = chdat[Int(round(1+(s-5)*0.1*rate)):Int(round((s+5)*0.1*rate))]
+    S  = multispec(segdat, dt=dt, NW=NW, K=K);
+    tfhm[:,s] = S.S[1:l];
+    if s%5==0
+        print(s,"\r");
+        flush(stdout);
     end
 end
+k=log10.(tfhm[:,1000:2000])
+heatmap(k[:,600:800],ylim=(0,100),clim=(-17,-15))
 # -------------------------------------------------------
 
 # spectra = NeuropixelAnalysis.load_precomputed() ;
