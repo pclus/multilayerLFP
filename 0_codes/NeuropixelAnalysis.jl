@@ -256,27 +256,26 @@ end
 
 Computes the time-frequency heatmap with MT-PSD using segments of 10s
 """
-function timefreq(id, fl)
+function timefreq(id::Integer, fl::String)
 
+    t, y = read_channel(id, 4e-4, 900, fl)    # time series starts at 4e-4
+    timefreq(y)
+end
+
+function timefreq(y::Vector{Float64})
     rate = 2500.0
     dt = 1.0 / rate
-    n = 384
     Δt = 10.0      # segment duration (10 seconds)
     ns = Int(900.0 / Δt)  # number of segments
     m = Int(2250000 / ns) # segments of 10 seconds
-    # mh = m/2;       # length of the MT spectra...
     l = 2000       # but...up to l is enough to get the relevant freqs
     NW = 1.0 * m * dt / (2.0)
     K = 8
-    t, chdat = read_channel(id, 4e-4, 900, fl)    # time series starts at 4e-4
 
-    #--------------------------------------------------------------
-    # Non-overlapping windows <default>
-    #--------------------------------------------------------------
     tfhm = zeros(l, ns)   # time-freq heatmap
     local S    # so that S exists outside the loop
     for s in 1:ns
-        segdat = chdat[((s-1)*m+1):s*m]
+        segdat = y[((s-1)*m+1):s*m]
         S = multispec(segdat, dt=dt, NW=NW, K=K)
         tfhm[:, s] = S.S[1:l]
         if s % 5 == 0
@@ -284,28 +283,13 @@ function timefreq(id, fl)
             flush(stdout)
         end
     end
-    #--------------------------------------------------------------
-    # Overlapping windows <just for display>
-    #--------------------------------------------------------------
-    # tfhm = zeros(l,900);   
-    # sec = 2250000/rate# for every second
-    # local S;    # so that S exists outside the loop
-    # for s in 5:895
-    #     segdat = chdat[Int(1+(s-5)*rate):Int((s+5)*rate)]
-    #     S  = multispec(segdat, dt=dt, NW=NW, K=K);
-    #     tfhm[:,s] = S.S[1:l];
-    #     if s%5==0
-    #         print(s,"\r");
-    #         flush(stdout);
-    #     end
-    # end
-    #--------------------------------------------------------------
 
     freqs = collect(S.f[1:l])
     times = collect(5:10:900)
 
     times, freqs, tfhm
 end
+
 
 """
     movfilter(t, tfhm, fl)

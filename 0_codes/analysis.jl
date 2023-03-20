@@ -19,10 +19,23 @@ using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 
 id=100; fl="cortex_pre"
 t, f, tfhm = timefreq(id, fl);
+t, f, tfhmtemp = timefreq(y);
 m = [logspectral_dist(tfhm[:,i],tfhm[:,j],f) for i in 1:90,j in 1:90]
 heatmap(m,clim=(0.0,0.45))
 
 smean = mean(tfhm,dims=2)[:,1]
+
+
+id=100; fl="cortex_pre"
+t, y = read_channel(id, 4e-4, 900, fl)
+S = rfft(y); 
+f = rfftfreq(length(t), 1.0/dt); 
+S0 = @. abs.(S)*exp(im*rand()*2*π);
+y0 = irfft(sur_S,2*length(S0)-2)
+
+
+
+
 # -------------------------------------------------------------
 # Surrogates --------------------------------------------------
 # -------------------------------------------------------------
