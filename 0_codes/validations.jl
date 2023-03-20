@@ -162,7 +162,7 @@ plot(f, mean_psd, ribbon=std_psd, c=1, fillalpha=0.25, yaxis=:log, yrange=(1e-23
 #
 # -------------------------------------------------------------
 
-#-------------------------------------------
+# -------------------------------------------------------------
 # Frequency for 1 second resolution
 rate = 2500.0
 dt = 1.0 / rate
@@ -188,7 +188,25 @@ for s in 5:8995
 end
 k=log10.(tfhm[:,1000:2000])
 heatmap(k[:,600:800],ylim=(0,100),clim=(-17,-15))
-# -------------------------------------------------------
+# -------------------------------------------------------------
+
+
+# -------------------------------------------------------------
+id=100; fl="pre"
+t, f, tfhm = timefreq_complete(id, fl);
+m = [logspectral_dist(tfhm[:,i],tfhm[:,j],f) for i in 1:90,j in 1:90]
+heatmap(m,clim=(0.0,0.45))
+
+f_idx, f_tfhm = movfilter(t, tfhm, "pre");
+smean = mean(f_tfhm,dims=2)
+σ = std(f_tfhm,dims=2);
+rs = randomize_spectra(smean,σ,90);
+mr = [logspectral_dist(rs[:,i],rs[:,j],f) for i in 1:90,j in 1:90]
+heatmap(mr) # nice result, but still, maybe surrogates
+
+m4 = [logspectral_dist(f_tfhm[:,i],f_tfhm[:,j],f) for i in 1:82,j in 1:82]
+heatmap(m4) #amazing
+# -------------------------------------------------------------
 
 
 

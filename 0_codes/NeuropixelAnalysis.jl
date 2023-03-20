@@ -399,8 +399,8 @@ function prepost_analysis(n0,nf)
     ns=[ n, n, n/2-2,n-4,384]
     ns=Int.(ns)
 
-    # for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
-    for (i,data) in enumerate(("kcsd_",))
+    for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
+    # for (i,data) in enumerate(("kcsd_",))
         n0=ns[i];
 
         psd_mean_tfhm_pre = zeros(n0, l);
