@@ -19,22 +19,56 @@ using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 
 id=100; fl="cortex_pre"
 t, f, tfhm = timefreq(id, fl);
-t, f, tfhmtemp = timefreq(y);
-m = [logspectral_dist(tfhm[:,i],tfhm[:,j],f) for i in 1:90,j in 1:90]
-heatmap(m,clim=(0.0,0.45))
+
 
 smean = mean(tfhm,dims=2)[:,1]
 
-
+using FFTW
+dt = 1/2500.0
 id=100; fl="cortex_pre"
 t, y = read_channel(id, 4e-4, 900, fl)
 S = rfft(y); 
 f = rfftfreq(length(t), 1.0/dt); 
 S0 = @. abs.(S)*exp(im*rand()*2*π);
-y0 = irfft(sur_S,2*length(S0)-2)
+y0 = irfft(S0,2*length(S0)-2)
+
+# t,f,tfhm  = timefreq(y)
+ts,f,tfhm0 = timefreq(y0)
+smean0 = mean(tfhm0,dims=2)[:,1]
+
+heatmap(tfhm)
+
+m = [logspectral_dist(tfhm[:,i],tfhm[:,j],f) for i in 1:90,j in 1:90]
+m0 = [logspectral_dist(tfhm0[:,i],tfhm0[:,j],f) for i in 1:90,j in 1:90]
+heatmap(m0,clim=(0.0,0.45))
+
+q = [logspectral_dist(tfhm[:,i],smean,f) for i in 1:90]
+q0 = [logspectral_dist(tfhm0[:,i],smean0,f) for i in 1:90]
+plot([q,q0],lt=:scatter,legend=:false)
 
 
+tr, tfhmr = movfilter(t,tfhm,"pre")
+smeanr = mean(tfhmr,dims=2)[:,1]
+tr, yr = movfilter(ts,reshape(y,:,90),"pre")
+yr=reshape(yr,:,1)[:,1]
 
+Sr = rfft(yr); 
+fr = rfftfreq(length(tr), 1.0/dt); 
+
+Sr0 = @. abs.(Sr)*exp(im*rand()*2*π);
+yr0 = irfft(Sr0,2*length(Sr0)-2)
+ts,f,tfhmr0 = timefreq(yr0)
+smeanr0 = mean(tfhmr0,dims=2)[:,1]
+
+
+qr0 = [logspectral_dist(tfhmr0[:,i],smeanr0,f) for i in 1:82]
+qr = [logspectral_dist(tfhmr[:,i],smeanr,f) for i in 1:82]
+
+ApproximatePermutationTest(qr0, qr, mean, 1000)
+plot([qr,qr0],lt=:scatter)
+
+
+# 
 
 # -------------------------------------------------------------
 # Surrogates --------------------------------------------------

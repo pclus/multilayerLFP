@@ -265,9 +265,10 @@ end
 function timefreq(y::Vector{Float64})
     rate = 2500.0
     dt = 1.0 / rate
-    Δt = 10.0      # segment duration (10 seconds)
-    ns = Int(900.0 / Δt)  # number of segments
-    m = Int(2250000 / ns) # segments of 10 seconds
+    Δt = 10.0               # segment duration (10 seconds)
+    T  = length(y)/rate     # total length
+    ns = Int(T / Δt)    # number of segments
+    m = Int(rate*Δt)    # segments of 10 seconds
     l = 2000       # but...up to l is enough to get the relevant freqs
     NW = 1.0 * m * dt / (2.0)
     K = 8
@@ -285,7 +286,7 @@ function timefreq(y::Vector{Float64})
     end
 
     freqs = collect(S.f[1:l])
-    times = collect(5:10:900)
+    times = collect(5:10:length(y))
 
     times, freqs, tfhm
 end
