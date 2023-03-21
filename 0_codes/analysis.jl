@@ -16,9 +16,9 @@ using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 # p1 = plot(S.f, S.S, xlim=(0, 205), ylim=(1e-18, 1e-14), lw=2.0, yaxis=:log,
 # xlabel="Freq. [Hz]",ylabel="Power [mV²]")
 
-
-id=100; fl="cortex_pre"
-t, f, tfhm = timefreq(id, fl);
+# change it to "cortex_pre"
+id=100; fl="cortex_pre"; Δt=1.0
+t, f, tfhm = timefreq(id, fl,Δt);
 
 
 smean = mean(tfhm,dims=2)[:,1]
@@ -32,24 +32,22 @@ f = rfftfreq(length(t), 1.0/dt);
 S0 = @. abs.(S)*exp(im*rand()*2*π);
 y0 = irfft(S0,2*length(S0)-2)
 
-# t,f,tfhm  = timefreq(y)
-ts,f,tfhm0 = timefreq(y0)
+ts,f,tfhm0 = timefreq(y0,Δt)
 smean0 = mean(tfhm0,dims=2)[:,1]
 
-heatmap(tfhm)
+ns = length(ts)
+m = [logspectral_dist(tfhm[:,i],tfhm[:,j],f) for i in 1:ns,j in 1:ns]
+m0 = [logspectral_dist(tfhm0[:,i],tfhm0[:,j],f) for i in 1:ns,j in 1:ns]
+heatmap(m,clim=(0.0,0.45))
 
-m = [logspectral_dist(tfhm[:,i],tfhm[:,j],f) for i in 1:90,j in 1:90]
-m0 = [logspectral_dist(tfhm0[:,i],tfhm0[:,j],f) for i in 1:90,j in 1:90]
-heatmap(m0,clim=(0.0,0.45))
-
-q = [logspectral_dist(tfhm[:,i],smean,f) for i in 1:90]
-q0 = [logspectral_dist(tfhm0[:,i],smean0,f) for i in 1:90]
+q = [logspectral_dist(tfhm[:,i],smean,f) for i in 1:ns]
+q0 = [logspectral_dist(tfhm0[:,i],smean0,f) for i in 1:ns]
 plot([q,q0],lt=:scatter,legend=:false)
 
 
-tr, tfhmr = movfilter(t,tfhm,"pre")
+tr, tfhmr = movfilter(ts,tfhm,"pre",Δt)
 smeanr = mean(tfhmr,dims=2)[:,1]
-tr, yr = movfilter(ts,reshape(y,:,90),"pre")
+tr, yr = movfilter(ts,reshape(y,:,ns),"pre",Δt)
 yr=reshape(yr,:,1)[:,1]
 
 Sr = rfft(yr); 
@@ -57,19 +55,45 @@ fr = rfftfreq(length(tr), 1.0/dt);
 
 Sr0 = @. abs.(Sr)*exp(im*rand()*2*π);
 yr0 = irfft(Sr0,2*length(Sr0)-2)
-ts,f,tfhmr0 = timefreq(yr0)
+ts,f,tfhmr0 = timefreq(yr0,Δt)
 smeanr0 = mean(tfhmr0,dims=2)[:,1]
 
+# the desired one
+ft = 2:500
+ns = length(ts)
+qr0 = [logspectral_dist(tfhmr0[ft,i],smeanr0[ft],f) for i in 1:ns]
+qr = [logspectral_dist(tfhmr[ft,i],smeanr[ft],f) for i in 1:ns]
 
-qr0 = [logspectral_dist(tfhmr0[:,i],smeanr0,f) for i in 1:82]
-qr = [logspectral_dist(tfhmr[:,i],smeanr,f) for i in 1:82]
+# the best one
+qr0 = [kolmogorov_smirnov_dist(tfhmr0[:,i],smeanr0,f) for i in 1:ns]
+qr = [kolmogorov_smirnov_dist(tfhmr[:,i],smeanr,f) for i in 1:ns]
 
-ApproximatePermutationTest(qr0, qr, mean, 1000)
+# not that good
+qr0 = [kullback_leibler_divergence(tfhmr0[1:500,i],smeanr0,f) for i in 1:ns]
+qr = [kullback_leibler_divergence(tfhmr[1:500,i],smeanr,f) for i in 1:ns]
+
+# just bad
+qr0 = [itakura_saito_divergence(tfhmr0[:,i],smeanr0,f) for i in 1:ns]
+qr = [itakura_saito_divergence(tfhmr[:,i],smeanr,f) for i in 1:ns]
+
+
+ApproximatePermutationTest(qr0, qr, mean, 10)
+ApproximateTwoSampleKSTest(qr0, qr)
+KSampleADTest(qr0,qr; modified = true, nsim = 0)
 plot([qr,qr0],lt=:scatter)
+mean(qr)
+mean(qr0)
 
+ApproximatePermutationTest(q0, q, mean, 1000)
+ApproximateTwoSampleKSTest(q0, q)
+KSampleADTest(q0,q; modified = true, nsim = 0)
 
-# 
+plot([var(tfhmr,dims=2)[:,1], var(tfhmr0,dims=2)[:,1]])
 
+plot(f,smean, lw=2)
+plot!(f,smean0, lw=2)
+plot!(f,smeanr)
+plot!(f,smeanr0)
 # -------------------------------------------------------------
 # Surrogates --------------------------------------------------
 # -------------------------------------------------------------

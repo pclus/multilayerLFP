@@ -256,20 +256,20 @@ end
 
 Computes the time-frequency heatmap with MT-PSD using segments of 10s
 """
-function timefreq(id::Integer, fl::String)
+function timefreq(id::Integer, fl::String, Δt=10.0)
 
-    t, y = read_channel(id, 4e-4, 900, fl)    # time series starts at 4e-4
-    timefreq(y)
+    t, y = read_channel(id, 4e-4, 900.0, fl)    # time series starts at 4e-4
+    timefreq(y,Δt)
 end
 
-function timefreq(y::Vector{Float64})
+function timefreq(y::Vector{Float64},Δt=10.0)
     rate = 2500.0
     dt = 1.0 / rate
-    Δt = 10.0               # segment duration (10 seconds)
+    # Δt = 10.0               # segment duration (10 seconds)
     T  = length(y)/rate     # total length
     ns = Int(T / Δt)    # number of segments
     m = Int(rate*Δt)    # segments of 10 seconds
-    l = 2000       # but...up to l is enough to get the relevant freqs
+    l = Int(min(2000,Δt*rate/2+1))       # but...up to l is enough to get the relevant freqs
     NW = 1.0 * m * dt / (2.0)
     K = 8
 
@@ -285,8 +285,9 @@ function timefreq(y::Vector{Float64})
         end
     end
 
+
     freqs = collect(S.f[1:l])
-    times = collect(5:10:length(y))
+    times = collect(0.5*Δt:Δt:T)
 
     times, freqs, tfhm
 end
@@ -297,10 +298,11 @@ end
 Authomatic removal of segments including movement data.
 This function assumes segments of Δt=10
 """
-function movfilter(t, tfhm, fl)
+function movfilter(t, tfhm, fl,Δt=10.0)
     mov_pre = readdlm("../1_data/mov_" * fl * ".dat", ' ')
-    Δt = 10.0
-    mov_indx = Int.(floor.(mov_pre ./ Δt) * Δt .+ 5)
+    # Δt = 10.0
+    # mov_indx = Int.(floor.(mov_pre ./ Δt) * Δt .+ 0.5*Δt)
+    mov_indx = floor.(mov_pre ./ Δt) * Δt .+ 0.5*Δt
     indx = t .∈ [mov_indx]
     indx = findall(==(0), indx)
     f_tfhm = tfhm[:, indx]
