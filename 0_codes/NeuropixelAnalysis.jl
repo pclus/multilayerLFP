@@ -265,7 +265,6 @@ end
 function timefreq(y::Vector{Float64},Δt=10.0)
     rate = 2500.0
     dt = 1.0 / rate
-    # Δt = 10.0               # segment duration (10 seconds)
     T  = length(y)/rate     # total length
     ns = Int(T / Δt)    # number of segments
     m = Int(rate*Δt)    # segments of 10 seconds
