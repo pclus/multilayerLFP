@@ -4,8 +4,7 @@ using NeuropixelAnalysis, DelimitedFiles, Multitaper, Plots, DSP, Statistics;
 using NumericalIntegration,HypothesisTests
 
 export KS_psd,randomize_spectra
-export logspectral_dist, 
-# export kolmogorov_smirnov_dist,kullback_leibler_divergence, itakura_saito_divergence
+export logspectral_dist
 
 function KS_psd(S1,S2,f)
     df = f[2]-f[1]
@@ -44,35 +43,6 @@ function randomize_spectra(smean,σ,nsampl)
     end
     rs[findall(rs.<0)].=1e-22; # avoid negative powers, this is problematic though
     return rs;
-end
-
-function kolmogorov_smirnov_dist(S1,S2,f)
-    df = f[2]-f[1]
-    psd1 = S1/ (sum(S1)*df); # normalization
-    cdf1 = [ sum(psd1[1:i])*df for i in 1:length(psd1)]
-
-    psd2 = S2/ (sum(S2)*df); # normalization
-    cdf2 = [ sum(psd2[1:i])*df for i in 1:length(psd2)]
-
-    return maximum(cdf1-cdf2)
-end
-
-function kullback_leibler_divergence(S1,S2,f)
-    df = f[2]-f[1]
-    psd1 = S1/ (sum(S1)*df); # normalization
-    psd2 = S2/ (sum(S2)*df); # normalization
-    # psd1 = S1/ mean(S1)
-    # psd2 = S2/ mean(S2)
-
-    return sum(@. psd1*log(psd1/psd2))
-end
-
-function itakura_saito_divergence(S1,S2,f)
-    df = f[2]-f[1]
-    psd1 = S1/ (sum(S1)*df); # normalization
-    psd2 = S2/ (sum(S2)*df); # normalization
-
-    return sum(@. psd1/psd2 - log(psd1/psd2) - 1.0)
 end
 
 end # module
