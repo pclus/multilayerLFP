@@ -4,8 +4,8 @@ using NeuropixelAnalysis, DelimitedFiles, Multitaper, Plots, DSP, Statistics;
 using NumericalIntegration,HypothesisTests
 
 export KS_psd,randomize_spectra
-export logspectral_dist, kolmogorov_smirnov_dist
-export kullback_leibler_divergence, itakura_saito_divergence
+export logspectral_dist, 
+# export kolmogorov_smirnov_dist,kullback_leibler_divergence, itakura_saito_divergence
 
 function KS_psd(S1,S2,f)
     df = f[2]-f[1]
