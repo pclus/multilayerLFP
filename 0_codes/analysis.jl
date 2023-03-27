@@ -159,12 +159,12 @@ xlabel = "Rel. power (pre)", ylabel = "depth [μm]")
 plot(spost[data][:,3],dp[data],msc=:auto)
 p2 = plot!(spost[data][:,4],dp[data],
 xlim=(0,1),msc=:auto,
-xlabel = "Rel. power (pre)", ylabel = "depth [μm]")
+xlabel = "Rel. power (post)", ylabel = "depth [μm]")
 
 
-plot(spre[data][:,3]-spost[data][:,3],dp[data])
-p3 = plot!(spre[data][:,4]-spost[data][:,4],dp[data],xlim=(-0.2,0.2),
-xlabel = "Difference", ylabel = "depth [μm]")
+plot(-spre[data][:,3]+spost[data][:,3],dp[data])
+p3 = plot!(-spre[data][:,4]+spost[data][:,4],dp[data],xlim=(-0.2,0.2),
+xlabel = "Difference (post-pre)", ylabel = "depth [μm]")
 
 plot(p1,p2,p3,layout=(1,3),labels=["α" "γ"],size=(800,450),lw=3)
 savefig("/home/pclusella/Desktop/"*data[1:end-1]*".png")
