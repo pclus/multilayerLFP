@@ -1,9 +1,9 @@
 module SpectralAnalysis
 
 using NeuropixelAnalysis, DelimitedFiles, Multitaper, Plots, DSP, Statistics;
-using NumericalIntegration,HypothesisTests
+using NumericalIntegration,HypothesisTests,FFTW
 
-export KS_psd,randomize_spectra
+export KS_psd,randomize_spectra, spectral_stationarity
 export logspectral_dist
 
 function KS_psd(S1,S2,f)
@@ -35,14 +35,46 @@ function logspectral_dist(s1,s2,f)
     mean(y)^0.5 # maybe divided by f[end]^0.5
 end
 
-function randomize_spectra(smean,σ,nsampl)
-    n = length(smean);
-    rs = zeros(n,nsampl)
-    for i in 1:nsampl
-        rs[:,i] = smean + σ.*randn(n);
+
+"""
+    spectral_stationarity(id,fl,Δt,mov_filter::String)
+
+Given a channel index id and a file to test, computes the tfhm and its surrogate.
+This function should be incorporated in the main analysis with modifications to 
+avoid computing the tfhm twice.
+"""
+function spectral_stationarity(id,fl,Δt,mov_filter::String)
+
+    rate = 2500;
+    dt = 1/rate;
+    t, y = read_channel(id, 4e-4, 900, fl);
+    T  = length(y)/rate;
+    ns = Int(T / Δt);
+
+    if !isempty(mov_filter)
+        dts = T/ns;
+        ts = 0.5*dts:dts:T
+        tr,yr = movfilter(ts,reshape(y,:,ns),mov_filter,Δt);
+        y=reshape(yr,:,1)[:,1];
     end
-    rs[findall(rs.<0)].=1e-22; # avoid negative powers, this is problematic though
-    return rs;
+
+    S = rfft(y); 
+    # f = rfftfreq(length(t), 1.0/dt); 
+    S0 = @. abs.(S)*exp(im*rand()*2*π);
+    y0 = irfft(S0,2*length(S0)-2);
+
+    t, f, tfhm = timefreq(y,Δt);
+    smean = mean(tfhm,dims=2)[:,1];
+    ts,f,tfhm0 = timefreq(y0,Δt);
+    smean0 = mean(tfhm0,dims=2)[:,1];
+
+    ns = length(ts)
+    
+    q = [logspectral_dist(tfhm[:,i],smean,f) for i in 1:ns]
+    q0 = [logspectral_dist(tfhm0[:,i],smean0,f) for i in 1:ns]
+
+    return q,q0,tfhm,tfhm0,f;
 end
+
 
 end # module

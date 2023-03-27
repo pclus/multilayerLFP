@@ -6,41 +6,7 @@ using NeuropixelAnalysis,SpectralAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 using FFTW
 
-function spectral_stationarity(id,fl,Δt,mov_filter::String)
 
-    rate = 2500;
-    dt = 1/rate;
-    t, y = read_channel(id, 4e-4, 900, fl);
-    T  = length(y)/rate;
-    ns = Int(T / Δt);
-
-    if !isempty(mov_filter)
-        dts = T/ns;
-        ts = 0.5*dts:dts:T
-        tr,yr = movfilter(ts,reshape(y,:,ns),mov_filter,Δt);
-        y=reshape(yr,:,1)[:,1];
-    end
-
-    S = rfft(y); 
-    # f = rfftfreq(length(t), 1.0/dt); 
-    S0 = @. abs.(S)*exp(im*rand()*2*π);
-    y0 = irfft(S0,2*length(S0)-2);
-
-    t, f, tfhm = timefreq(y,Δt);
-    smean = mean(tfhm,dims=2)[:,1];
-    ts,f,tfhm0 = timefreq(y0,Δt);
-    smean0 = mean(tfhm0,dims=2)[:,1];
-
-    ns = length(ts)
-    # m = [logspectral_dist(tfhm[:,i],tfhm[:,j],f) for i in 1:ns,j in 1:ns]
-    # m0 = [logspectral_dist(tfhm0[:,i],tfhm0[:,j],f) for i in 1:ns,j in 1:ns]
-    # heatmap(m,clim=(0.0,0.45))
-
-    q = [logspectral_dist(tfhm[:,i],smean,f) for i in 1:ns]
-    q0 = [logspectral_dist(tfhm0[:,i],smean0,f) for i in 1:ns]
-
-    return q,q0,tfhm,tfhm0,f;
-end
 
 id=100; fl="cortex_pre"; Δt=10.0; mov_filter="pre";
 q,q0,tfhm,tfhm0,f = spectral_stationarity(id,fl,Δt,mov_filter)
@@ -56,7 +22,7 @@ pr_KS = pvalue(ApproximateTwoSampleKSTest(qr0, qr))
 pr_AD = pvalue(KSampleADTest(qr0,qr; modified = true, nsim = 0))
 
 # plots
-using LaTeXStrings
+using LaTeXStrings,StatsPlots,Printf
 dotplot([q q0], msw = 0, ms=2.0)
 dotplot!([qr qr0],
     xticks=([ 1 2 3 4],["no-mov", "no-mov surr.", "mov.", "mov. surr."]),
@@ -68,7 +34,7 @@ plot!([1:4], [mean(q), mean(q0), mean(qr), mean(qr0)],
     ylabel="distance to mean "*L"d(S_j,\langle S\rangle)")
 annotate!(1.5,0.25,text("pₖₛ="*@sprintf("%.3e",p_KS),10))
 annotate!(3.5,0.25,text("pₖₛ="*@sprintf("%.3e",pr_KS),10))
-
+savefig("~/Desktop/Fig2.png")
 
 # surrogate vs surrogate?
 # q ,q1 = spectral_stationarity(id,fl,Δt,mov_filter)
@@ -86,9 +52,10 @@ sstd0 = std(tfhm0,dims=2)[:,1]
 # sstdr = std(tfhmr,dims=2)[:,1]
 # sstdr0 = std(tfhmr0,dims=2)[:,1]
 
-plot(f,smean,ribbon=sstd,c=1,fillalpha=0.25,xlim=(0,100))
+plot(f,smean,ribbon=sstd,c=1,fillalpha=0.25,xlim=(0,100), labels="no-mov.")
 plot!(f,smean0,ribbon=sstd0,c=2,fillalpha=0.25,xlim=(0,100),
-    xlabel = "Freq [Hz]", ylabel="Power [mV²]", labels=[ "no-mov." "no-mov. surr."])
+    xlabel = "Freq [Hz]", ylabel="Power [mV²]", labels="no-mov. surr.")
+savefig("~/Desktop/Fig3.png")
 
 # plot(f,smeanr,ribbon=sstd,c=1,fillalpha=0.25,xlim=(0,100))
 # plot!(f,smeanr0,ribbon=sstd0,c=2,fillalpha=0.25,xlim=(0,100))
@@ -116,7 +83,7 @@ set yrange[0:*];
 set size 0.88,0.5" :-
 @gp :- qr "u (-5+\$0*10):1 w p ps 0.5 t 'mov.'"
 @gp :- qr0 "u (-5+\$0*10):1 w p ps 0.5 pt 5 t 'mov. surr.'"
-
+savefig("~/Desktop/Fig1.png")
 
 # iterate overall all channels
 fl="cortex_pre"; Δt=10.0; mov_filter="pre";
@@ -127,3 +94,5 @@ pvals=zeros(n)
     pvals[id+1] = pvalue(ApproximateTwoSampleKSTest(q0, q))
 end
 
+plot(pvals,xlabel="Channel", ylabel="KS p-value",yaxis=:log, lt=:scatter,legend=:false)
+savefig("~/Desktop/Fig4.png")

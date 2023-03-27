@@ -24,7 +24,6 @@ for (i,condition) in enumerate(["pre","post"])
     kcsd = readdlm(path*"psd_mean_tfhm_kcsd_"*condition*".dat")
     fr = 0.0:0.1:199.9
 
-
     α1[:,i],γ1[:,i] = relative_power(lfp,fr)
     α2[:,i],γ2[:,i] = relative_power(blfp,fr)
     α3[:,i],γ3[:,i] = relative_power(csd,fr)
@@ -93,13 +92,13 @@ legendfontsize=12,foreground_color_legend = nothing)
 
 
 
-
-plot(4:0.1:22,lfp[40:220,70],
-fillrange=1e-18.*ones(181),lc=1,fillalpha=0.25)
-plot!(32:0.1:48,lfp[320:480,70],
-fillrange=1e-18.*ones(161),lc=2,fillalpha=0.25)
-plot!(0:0.1:199.9,lfp[:,70],
-yaxis=:log,lw=2,
-ylim=(0.5e-17,1e-14),xlim=(0,1e2),
-xlabel="Freq. [Hz]",
-ylabel="Power [mV²]",lc=3,key=:false)
+# Areas below the spectra:
+# plot(4:0.1:22,lfp[40:220,70],
+# fillrange=1e-18.*ones(181),lc=1,fillalpha=0.25)
+# plot!(32:0.1:48,lfp[320:480,70],
+# fillrange=1e-18.*ones(161),lc=2,fillalpha=0.25)
+# plot!(0:0.1:199.9,lfp[:,70],
+# yaxis=:log,lw=2,
+# ylim=(0.5e-17,1e-14),xlim=(0,1e2),
+# xlabel="Freq. [Hz]",
+# ylabel="Power [mV²]",lc=3,key=:false)

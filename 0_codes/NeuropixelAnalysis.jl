@@ -443,9 +443,9 @@ ypos(y,skip,nrow,dp,dist) = -0.413*dp + (skip + floor((y-1)/nrow))*dist
 
 function depth(type,n)
     dp = 3840
-    if type=="lfp"
+    if type=="cortex"
         return ypos.(1:n, 0, 2, dp, 20)
-    elseif type=="blfp"
+    elseif type=="bipolar"
         return ypos.(1:n, 2, 2, dp, 20)
     elseif type=="csd"
         return ypos.(1:n, 1, 1, dp, 20)

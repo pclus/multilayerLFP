@@ -6,130 +6,165 @@ using NeuropixelAnalysis,SpectralAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 # plotlyjs()
 
-# id=220
-# t,chdat = read_channel(id,200.0,201.0,"filtered_pre")
-# rate = 2500.0;
-# dt = 1.0 / rate;
-# NW = 1.0 * length(chdat) * dt / (2.0);  
-# K = 8;   
-# S = multispec(chdat, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=false);
-# p1 = plot(S.f, S.S, xlim=(0, 205), ylim=(1e-18, 1e-14), lw=2.0, yaxis=:log,
-# xlabel="Freq. [Hz]",ylabel="Power [mV²]")
 
 # change it to "cortex_pre"
-id=100; fl="cortex_pre"; Δt=1.0
+id=100; fl="cortex_pre"; Δt=10.0
 t, f, tfhm = timefreq(id, fl,Δt);
+idx, tfhm = movfilter(t, tfhm, "pre")
+
+freqs=f;
+function relative_power_(freqs,tfhm)
+    df = freqs[2]-freqs[1]
+    αband = findall(@. freqs>4.0 && freqs<22)
+    γband = findall(@. freqs>32.0 && freqs<48.0)
+    α = sum(tfhm[αband,:],dims=1)[1,:]*df 
+    γ = sum(tfhm[γband,:],dims=1)[1,:]*df 
+    tot = sum(tfhm[:,:],dims=1)[1,:]*df 
+    # mα = mean(α)
+    # mγ = mean(γ)
+    # sα = std(α)
+    # sγ = std(γ)
+    # return mα,mγ,sα,sγ
+    return α,γ,tot
+end
+
+n0=226;
+nf=361;
+function prepost_analysis(n0,nf)
+    l = 2000;
+    n=size(n0:nf)[1]
+    ns=[ n, n, n/2-2,n-4,384]
+    ns=Int.(ns)
+
+    stats_band_pre = Dict();
+    stats_band_post = Dict();
+    pvals_α = Dict();
+    pvals_γ = Dict();
+    for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
+    # for (i,data) in enumerate(("kcsd_",))
+        n0=ns[i];
+        stats_band_pre[data], stats_band_post[data], pvals_α[data], pvals_γ[data] = prepost_comparison(data,n0)
+    end
+
+    return stats_band_pre, stats_band_post, pvals_α , pvals_γ
+end
+
+# write -------------------------------------------------------
+spre,spost,pα,pγ = prepost_analysis(n0,nf)
+
+for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
+    writedlm("../4_outputs/"*data*"spre.dat", spre[data], ' ');
+    writedlm("../4_outputs/"*data*"spost.dat", spost[data], ' ');
+    writedlm("../4_outputs/"*data*"palpha.dat", pα[data], ' ');
+    writedlm("../4_outputs/"*data*"pgamma.dat", pγ[data], ' ');
+end
+#--------------------------------------------------------------
+
+# read --------------------------------------------------------
+spre = Dict();
+spost = Dict();
+pα = Dict();
+pγ = Dict();
+
+for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
+    spre[data] =readdlm("../4_outputs/"*data*"spre.dat");
+    spost[data] = readdlm("../4_outputs/"*data*"spost.dat");
+    pα[data] = readdlm("../4_outputs/"*data*"palpha.dat");
+    pγ[data] = readdlm("../4_outputs/"*data*"pgamma.dat");
+end
+#--------------------------------------------------------------
+
+function prepost_comparison(data,n0)
+    l = 2000
+
+    psd_mean_tfhm_pre = zeros(n0, l);
+    psd_std_tfhm_pre = zeros(n0, l);
+    psd_mean_tfhm_post = zeros(n0, l);
+    psd_std_tfhm_post = zeros(n0, l);
+    pvals_tfhm = zeros(n0, l);
+    pvals_uneq_tfhm = zeros(n0, l);
+    pvals_perm_tfhm = zeros(n0, l);
+
+    stats_band_pre = zeros(n0,8)
+    stats_band_post = zeros(n0,8)
+    pvals_α = zeros(n0,2)
+    pvals_γ = zeros(n0,2)
+
+    state = Threads.Atomic{Int}(0);
+
+    Threads.@threads for id in 0:n0-1
+        # Prompt state
+        Threads.atomic_add!(state, 1)
+        print("--> ", state[], " out of ", n0, "\n")
+        flush(stdout)
+
+        # Pre
+        t, f, tfhm = timefreq(id, data*"pre")
+        idx, tfhm_pre = movfilter(t, tfhm, "pre")
+        psd_mean_tfhm_pre[id+1, :] = mean(tfhm_pre, dims=2)
+        psd_std_tfhm_pre[id+1, :] = std(tfhm_pre, dims=2)
+
+        # Post
+        t, f, tfhm = timefreq(id, data*"post")
+        idx, tfhm_post = movfilter(t, tfhm, "post")
+        psd_mean_tfhm_post[id+1, :] = mean(tfhm_post, dims=2)
+        psd_std_tfhm_post[id+1, :] = std(tfhm_post, dims=2)
+
+        # band analysis 
+        α_pre, γ_pre, total_pre = relative_power_(f,tfhm_pre)
+        stats_band_pre[id+1,1:8] .=
+                mean(α_pre),mean(γ_pre),mean(α_pre./total_pre),mean(γ_pre./total_pre),
+                std(α_pre), std(γ_pre), std(α_pre./total_pre), std(γ_pre./total_pre)
+
+        α_post, γ_post, total_post = relative_power_(f,tfhm_post)
+        stats_band_post[id+1,1:8] .=
+                mean(α_post),mean(γ_post),mean(α_post./total_post),mean(γ_post./total_post),
+                std(α_post), std(γ_post), std(α_post./total_post), std(γ_post./total_post)
+
+        pvals_α[id+1,1] = pvalue(ApproximatePermutationTest(α_pre, α_post, mean, 1000))
+        pvals_γ[id+1,1] = pvalue(ApproximatePermutationTest(γ_pre, γ_post, mean, 1000))
+        pvals_α[id+1,2] = pvalue(ApproximatePermutationTest(α_pre./total_pre, α_post./total_post, mean, 1000))
+        pvals_γ[id+1,2] = pvalue(ApproximatePermutationTest(γ_pre./total_pre, γ_post./total_post, mean, 1000))
+
+        # T-test. 
+        # for j in 1:l
+        #     pvals_uneq_tfhm[id+1, j] = pvalue(UnequalVarianceTTest(tfhm_pre[j, :], tfhm_post[j, :]))
+        #     pvals_tfhm[id+1, j] = pvalue(EqualVarianceTTest(tfhm_pre[j, :], tfhm_post[j, :]))# can be computed from the means
+        #     pvals_perm_tfhm[id+1,j] = pvalue(ApproximatePermutationTest(tfhm_pre[j, :], tfhm_post[j, :], mean, 1000))
+        # end
+    end
+
+    return stats_band_pre, stats_band_post, pvals_α, pvals_γ
+
+end
+
+dp = Dict()
+for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
+    dp[data] = depth(data[1:end-1],size(spre[data])[1])
+end
 
 
-smean = mean(tfhm,dims=2)[:,1]
+# plot(spre[data][:,3],dp[data],xerr=spre[data][:,7],msc=:auto)
+# p1 = plot!(spre[data][:,4],dp[data],xerr=spre[data][:,7],
+# xlim=(0,1),msc=:auto,msw=0.1,
+# xlabel = "Rel. power (pre)", ylabel = "depth [μm]")
 
-using FFTW
-dt = 1/2500.0
-id=100; fl="cortex_pre"
-t, y = read_channel(id, 4e-4, 900, fl)
-S = rfft(y); 
-f = rfftfreq(length(t), 1.0/dt); 
-S0 = @. abs.(S)*exp(im*rand()*2*π);
-y0 = irfft(S0,2*length(S0)-2)
+data="bipolar_"
 
-ts,f,tfhm0 = timefreq(y0,Δt)
-smean0 = mean(tfhm0,dims=2)[:,1]
+plot(spre[data][:,3],dp[data])
+p1 = plot!(spre[data][:,4],dp[data],
+xlim=(0,1),msc=:auto,
+xlabel = "Rel. power (pre)", ylabel = "depth [μm]")
 
-ns = length(ts)
-m = [logspectral_dist(tfhm[:,i],tfhm[:,j],f) for i in 1:ns,j in 1:ns]
-m0 = [logspectral_dist(tfhm0[:,i],tfhm0[:,j],f) for i in 1:ns,j in 1:ns]
-heatmap(m,clim=(0.0,0.45))
-
-q = [logspectral_dist(tfhm[:,i],smean,f) for i in 1:ns]
-q0 = [logspectral_dist(tfhm0[:,i],smean0,f) for i in 1:ns]
-plot([q,q0],lt=:scatter,legend=:false)
+plot(spost[data][:,3],dp[data],msc=:auto)
+p2 = plot!(spost[data][:,4],dp[data],
+xlim=(0,1),msc=:auto,
+xlabel = "Rel. power (pre)", ylabel = "depth [μm]")
 
 
-tr, tfhmr = movfilter(ts,tfhm,"pre",Δt)
-smeanr = mean(tfhmr,dims=2)[:,1]
-tr, yr = movfilter(ts,reshape(y,:,ns),"pre",Δt)
-yr=reshape(yr,:,1)[:,1]
+plot(spre[data][:,3]-spost[data][:,3],dp[data])
+p3 = plot!(spre[data][:,4]-spost[data][:,4],dp[data],xlim=(-0.2,0.2),
+xlabel = "Difference", ylabel = "depth [μm]")
 
-Sr = rfft(yr); 
-fr = rfftfreq(length(tr), 1.0/dt); 
-
-Sr0 = @. abs.(Sr)*exp(im*rand()*2*π);
-yr0 = irfft(Sr0,2*length(Sr0)-2)
-ts,f,tfhmr0 = timefreq(yr0,Δt)
-smeanr0 = mean(tfhmr0,dims=2)[:,1]
-
-# the desired one
-ft = 2:500
-ns = length(ts)
-qr0 = [logspectral_dist(tfhmr0[ft,i],smeanr0[ft],f) for i in 1:ns]
-qr = [logspectral_dist(tfhmr[ft,i],smeanr[ft],f) for i in 1:ns]
-
-# the best one
-qr0 = [kolmogorov_smirnov_dist(tfhmr0[:,i],smeanr0,f) for i in 1:ns]
-qr = [kolmogorov_smirnov_dist(tfhmr[:,i],smeanr,f) for i in 1:ns]
-
-# not that good
-qr0 = [kullback_leibler_divergence(tfhmr0[1:500,i],smeanr0,f) for i in 1:ns]
-qr = [kullback_leibler_divergence(tfhmr[1:500,i],smeanr,f) for i in 1:ns]
-
-# just bad
-qr0 = [itakura_saito_divergence(tfhmr0[:,i],smeanr0,f) for i in 1:ns]
-qr = [itakura_saito_divergence(tfhmr[:,i],smeanr,f) for i in 1:ns]
-
-
-ApproximatePermutationTest(qr0, qr, mean, 10)
-ApproximateTwoSampleKSTest(qr0, qr)
-KSampleADTest(qr0,qr; modified = true, nsim = 0)
-plot([qr,qr0],lt=:scatter)
-mean(qr)
-mean(qr0)
-
-ApproximatePermutationTest(q0, q, mean, 1000)
-ApproximateTwoSampleKSTest(q0, q)
-KSampleADTest(q0,q; modified = true, nsim = 0)
-
-plot([var(tfhmr,dims=2)[:,1], var(tfhmr0,dims=2)[:,1]])
-
-plot(f,smean, lw=2)
-plot!(f,smean0, lw=2)
-plot!(f,smeanr)
-plot!(f,smeanr0)
-# -------------------------------------------------------------
-# Surrogates --------------------------------------------------
-# -------------------------------------------------------------
-using FFTW
-dt = 1/2500.0
-l=2000
-
-# Fill the average spectra with points interpolating
-f_end=f[end]; df=f[2]-f[1];
-freqs = 0.0:df:f_end
-itp = Interpolations.scale(interpolate(smean, BSpline(Linear())), freqs )
-l0 = Int((10*rate + 2)/2)
-df0 = f_end/(ln-1)
-freqs0 =  0.0:dfn:199.9
-smean0 = itp(freqs0)
-
-# create a surrogate with random phases
-sur_S = @. sqrt.(smean0)*exp(im*rand()*2*π);
-# scale=(2.0*length(smean0)/dt)^0.5
-scale = (2.0*l0*rate*10*df0)^0.5
-sur = irfft(sur_S,2*l0-2)*scale
-
-# interpolate back to original sampling
-itp0 = extrapolate(Interpolations.scale(interpolate(S.S,BSpline(Linear())),S.f),Line())
-s0 = itp0(freqs) 
-plot([smean,s0,tfhm[:,1]])
-
-logspectral_dist(smean,s0,freqs)
-logspectral_dist(smean,tfhm[:,1],freqs)
-
-# This method won't help us. There are two issues:
-# (1) We are modifying the spectra resolution "ad hoc".
-# This might be only a technical point, but it looks "fishy".
-# (2) [The important point] The surrogates are too close to the
-# average spectra. Notice that if it was not for the interpolation 
-# the smean and s0 would be completely identical
-# -------------------------------------------------------------
-# -------------------------------------------------------------
-# -------------------------------------------------------------
+plot(p1,p2,p3,layout=(1,3),labels=["α" "γ"],size=(800,450),lw=3)
+savefig("/home/pclusella/Desktop/"*data[1:end-1]*".png")
