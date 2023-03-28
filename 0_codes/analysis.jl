@@ -1,7 +1,7 @@
 #!/usr/bin/env -S julia --threads 16
 
-push!(LOAD_PATH, "/home/pclusella/Documents/Data/UPO-tACs/0_codes/")
-cd("/home/pclusella/Documents/Data/UPO-tACs/0_codes/")
+push!(LOAD_PATH, "0_codes/")
+cd("0_codes/")
 using NeuropixelAnalysis,SpectralAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 # plotlyjs()
@@ -9,7 +9,7 @@ using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 
 # change it to "cortex_pre"
 id=100; fl="cortex_pre"; Δt=10.0
-t, f, tfhm = timefreq(id, fl,Δt);
+t, f, tfhm = timefreq(id, fl, Δt);
 idx, tfhm = movfilter(t, tfhm, "pre")
 
 freqs=f;
