@@ -1,14 +1,14 @@
 #!/usr/bin/env -S julia --threads 16
 
-push!(LOAD_PATH, "/home/pclusella/Documents/Data/UPO-tACs/0_codes/")
-cd("/home/pclusella/Documents/Data/UPO-tACs/0_codes/")
+cd("0_codes/")
+push!(LOAD_PATH, pwd())
 using NeuropixelAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics;
 # plotlyjs()
 gr()
 
-path="/home/pclusella/Documents/Data/UPO-tACs/7_results/cortex_heatmaps/"
-condition = "post"
+path="../7_results/cortex_heatmaps/"
+
 p = Array{Plots.Plot{Plots.GRBackend},2}(undef,5,2)
 ns = [136 132 66 136]
 α1 = zeros(ns[1],2); γ1 = zeros(ns[1],2)

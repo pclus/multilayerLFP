@@ -20,7 +20,7 @@
 
 ### Local Field Potential files
 
-The "pre" and "post" data in the Matlab file have been transcribed to binary files for convenience.
+The "pre" and "post" data in the original Matlab file have been transcribed to binary files for convenience.
 The "pre" data has been stored in `1_data/pre.bin`, and the "post" data has been stored in `1_data/pre.bin`.
 These files have been created by running this code in Matlab:
 
@@ -41,27 +41,26 @@ This is very convinient for later reading of the files, because Matlab stores ma
 
 ### Reading binary files with C
 
-To read these binary files notice that the matrix dimensions of each, `pre` and `post`, are 2250000x384.
-The Julia function `read_channel()` in `analysis.jl` takes care of this (see later).
-However we include an additional C function that can be used directly
-
-The function `readbin` can be used to read such binary files
-Source code is stored in the `0_codes` directory.
-The usage of the function is 
+The binary files contain a matrix with dimensions 2250000x384.
+The Julia function `read_channel()` in `NeuropixelAnalysis.jl` takes care of this (see below).
+However we include an additional C program, `readbin.c`, that
+can be used without need of Julia.
+Source code is stored in the `0_codes` directory and can be compiled
+with `gcc` from that directory using `gcc read_binary.c -o ../readbin -O3`.
+The usage of the function is then:
 
 ```
 ./readbin <infile> <outfile> <id> <t0> <tf>`
 ```
-and outputs in `<outfile>` the time series of channel `<id>` (from 1 to 384)
-from time `<t0>` to `<tf>` (from 0.0004 to 900).
-The data must be stored in the binary `<infile>`.
+As a result, the time series of channel `<id>` (from 0 to 383) stored in the binary `<infile>` 
+from time `<t0>` to `<tf>` (from 0.0004 to 900) will be copied in the newly created file `<outfile>` (will override existing files).
 For example:
 
 ```
-./readbin 1_data/pre.bin t2.dat 350 200 300
+./readbin 1_data/pre.bin ts.dat 350 200 300
 ```
 
-stores the time series of channel 350 from 200s to 300s to the t2.dat file.
+stores the time series of channel 350 from 200s to 300s to the `ts.dat` file.
 
 
 ### Movement data
@@ -212,7 +211,6 @@ CH=100 # or any other id
 awk -v k=$CH 'NR==FNR{a[FNR]=$k} NR>FNR{b[FNR]=$k} END {for(i in a){print a[i],b[i]}}' psd_mean_tfhm.dat psd_std_tfhm.dat > psd_mean_tf_ch${CH}.dat
 ```
 
-
 To plot the total heatmap:
 
 ```
@@ -236,28 +234,14 @@ plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 
 -. Repeat analysis only in cortex!
 0. Code cleaning:
-	- [ ] Create a package for julia
-	- [x] Make indices always go from 0 to 383
-	- [ ] Fix the authomatic paths to directories to load/save data in `*jl` and  `*py` files
 	- [ ] Further fix the pass of the arguments in the kcsd code (src_x and src_y). 
 	- [ ] For cortex electrodes in csd and bipolar, maybe we should return (and store in the binary) the number
 of recorded electrodes. This will depend on how much it varies from subject to subject.
-1. Look for differences in **time-frequency** accross channels
-	- [] Moving window time-freq heatmap to visualize better the differences.
-	- [] Non-parametric analysis
+1. Look for differences in **time-frequency** accross channels *(under development)*
 2. [x] CSD using k-density method. 
-	- [ ] Note about kCSD and its validation:
+	- [ ] Write a report about kCSD and its validation:
 		- Error plots with results from cross validation
 		- Comparison with Laplacian (correlations)
 		- Broken electrodes
 3. Band-pass filter or freq. bands comparison 
-	- [] Check phase-amplitude relation between $\alpha$ and $\gamma$
-4. Ask UPO:
-	- [] Are the movement artifacts because of the movement, or the change in "brain state"? Ask UPO
-	- [] What's the reason for the 50Hz and 60 Hz artifacts? Maybe noise for "zero" stimulation
-	- [] How to detect the "broken" electrodes? are they really "broken"?
-5. Other:
-	- [] T-test assumes normalitiy, should check there are no long tails at least.
-	- [] Permutation tests (Giulio's paper)
-	- [] Analyze movement data
-
+	- [ ] Check phase-amplitude relation between $\alpha$ and $\gamma$

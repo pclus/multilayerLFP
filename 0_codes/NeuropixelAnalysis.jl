@@ -359,20 +359,6 @@ function heatmap_segments(fl,n)
     return psd_mean_tfhm,psd_std_tfhm
 end
 
-# """
-#     ttest_eqvar(fmean1,fmean2,fstd1,fstd2)
-
-# T test of equal variances using pre-saved heatmaps (should have same size)
-# """
-# function ttest_eqvar(fmean1,fmean2,fstd1,fstd2)
-#     A=dlmread(fmean1)
-#     B=dlmread(fmean2)
-#     sA=dlmread(fstd1)
-#     sB=dlmread(fstd2)
-#     nx= ;
-#     ny= ;
-#     test = EqualVarianceTTest.(nx,ny,A,B,sA,sB)
-# end
 
 """
     prepost_analysis(n0,nf)
@@ -385,56 +371,81 @@ function prepost_analysis(n0,nf)
     ns=[ n, n, n/2-2,n-4,384]
     ns=Int.(ns)
 
+    stats_band_pre = Dict();
+    stats_band_post = Dict();
+    pvals_α = Dict();
+    pvals_γ = Dict();
     for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
-    # for (i,data) in enumerate(("kcsd_",))
         n0=ns[i];
-
-        psd_mean_tfhm_pre = zeros(n0, l);
-        psd_std_tfhm_pre = zeros(n0, l);
-        psd_mean_tfhm_post = zeros(n0, l);
-        psd_std_tfhm_post = zeros(n0, l);
-        pvals_tfhm = zeros(n0, l);
-        pvals_uneq_tfhm = zeros(n0, l);
-        pvals_perm_tfhm = zeros(n0, l);
-
-        state = Threads.Atomic{Int}(0);
-
-        Threads.@threads for id in 0:n0-1
-
-            # Prompt state
-            Threads.atomic_add!(state, 1)
-            print("--> ", state[], " out of ", n0, "\n")
-            flush(stdout)
-
-            # Pre
-            t, f, tfhm = timefreq(id, data*"pre")
-            idx, f_pre = movfilter(t, tfhm, "pre")
-            psd_mean_tfhm_pre[id+1, :] = mean(f_pre, dims=2)
-            psd_std_tfhm_pre[id+1, :] = std(f_pre, dims=2)
-
-            # Post
-            t, f, tfhm = timefreq(id, data*"post")
-            idx, f_post = movfilter(t, tfhm, "post")
-            psd_mean_tfhm_post[id+1, :] = mean(f_post, dims=2)
-            psd_std_tfhm_post[id+1, :] = std(f_post, dims=2)
-
-            # T-test. 
-            for j in 1:l
-                pvals_uneq_tfhm[id+1, j] = pvalue(UnequalVarianceTTest(f_pre[j, :], f_post[j, :]))
-                pvals_tfhm[id+1, j] = pvalue(EqualVarianceTTest(f_pre[j, :], f_post[j, :]))# can be computed from the means
-                pvals_perm_tfhm[id+1,j] = pvalue(ApproximatePermutationTest(f_pre[j, :], f_post[j, :], mean, 1000))
-            end
-        end
-
-        writedlm("../4_outputs/psd_mean_tfhm_"*data*"pre.dat", psd_mean_tfhm_pre', ' ');
-        writedlm("../4_outputs/psd_std_tfhm_"*data*"pre.dat", psd_std_tfhm_pre', ' ');
-        writedlm("../4_outputs/psd_mean_tfhm_"*data*"post.dat", psd_mean_tfhm_post', ' ');
-        writedlm("../4_outputs/psd_std_tfhm_"*data*"post.dat", psd_std_tfhm_post', ' ');
-        writedlm("../4_outputs/psd_"*data*"pvals_eq.dat", pvals_tfhm', ' ');
-        writedlm("../4_outputs/psd_"*data*"pvals.dat", pvals_uneq_tfhm', ' ');
-        writedlm("../4_outputs/psd_"*data*"pvals_perm.dat", pvals_perm_tfhm', ' ');
-        writedlm("../4_outputs/psd_"*data*"difference.dat", (psd_mean_tfhm_post - psd_mean_tfhm_pre)', ' ');
+        stats_band_pre[data], stats_band_post[data], pvals_α[data], pvals_γ[data] = prepost_comparison(data,n0)
     end
+
+    return stats_band_pre, stats_band_post, pvals_α , pvals_γ
+end
+
+
+function prepost_comparison(data,n0)
+    l = 2000
+
+    psd_mean_tfhm_pre = zeros(n0, l);
+    psd_std_tfhm_pre = zeros(n0, l);
+    psd_mean_tfhm_post = zeros(n0, l);
+    psd_std_tfhm_post = zeros(n0, l);
+    pvals_tfhm = zeros(n0, l);
+    pvals_uneq_tfhm = zeros(n0, l);
+    pvals_perm_tfhm = zeros(n0, l);
+
+    stats_band_pre = zeros(n0,8)
+    stats_band_post = zeros(n0,8)
+    pvals_α = zeros(n0,2)
+    pvals_γ = zeros(n0,2)
+
+    state = Threads.Atomic{Int}(0);
+
+    Threads.@threads for id in 0:n0-1
+        # Prompt state
+        Threads.atomic_add!(state, 1)
+        print("--> ", state[], " out of ", n0, "\n")
+        flush(stdout)
+
+        # Pre
+        t, f, tfhm = timefreq(id, data*"pre")
+        idx, tfhm_pre = movfilter(t, tfhm, "pre")
+        psd_mean_tfhm_pre[id+1, :] = mean(tfhm_pre, dims=2)
+        psd_std_tfhm_pre[id+1, :] = std(tfhm_pre, dims=2)
+
+        # Post
+        t, f, tfhm = timefreq(id, data*"post")
+        idx, tfhm_post = movfilter(t, tfhm, "post")
+        psd_mean_tfhm_post[id+1, :] = mean(tfhm_post, dims=2)
+        psd_std_tfhm_post[id+1, :] = std(tfhm_post, dims=2)
+
+        # band analysis 
+        α_pre, γ_pre, total_pre = relative_power_from_segments(f,tfhm_pre)
+        stats_band_pre[id+1,1:8] .=
+                mean(α_pre),mean(γ_pre),mean(α_pre./total_pre),mean(γ_pre./total_pre),
+                std(α_pre), std(γ_pre), std(α_pre./total_pre), std(γ_pre./total_pre)
+
+        α_post, γ_post, total_post = relative_power_from_segments(f,tfhm_post)
+        stats_band_post[id+1,1:8] .=
+                mean(α_post),mean(γ_post),mean(α_post./total_post),mean(γ_post./total_post),
+                std(α_post), std(γ_post), std(α_post./total_post), std(γ_post./total_post)
+
+        pvals_α[id+1,1] = pvalue(ApproximatePermutationTest(α_pre, α_post, mean, 1000))
+        pvals_γ[id+1,1] = pvalue(ApproximatePermutationTest(γ_pre, γ_post, mean, 1000))
+        pvals_α[id+1,2] = pvalue(ApproximatePermutationTest(α_pre./total_pre, α_post./total_post, mean, 1000))
+        pvals_γ[id+1,2] = pvalue(ApproximatePermutationTest(γ_pre./total_pre, γ_post./total_post, mean, 1000))
+
+        # T-test. 
+        # for j in 1:l
+        #     pvals_uneq_tfhm[id+1, j] = pvalue(UnequalVarianceTTest(tfhm_pre[j, :], tfhm_post[j, :]))
+        #     pvals_tfhm[id+1, j] = pvalue(EqualVarianceTTest(tfhm_pre[j, :], tfhm_post[j, :]))# can be computed from the means
+        #     pvals_perm_tfhm[id+1,j] = pvalue(ApproximatePermutationTest(tfhm_pre[j, :], tfhm_post[j, :], mean, 1000))
+        # end
+    end
+
+    return stats_band_pre, stats_band_post, pvals_α, pvals_γ
+
 end
 
 
@@ -456,7 +467,7 @@ function depth(type,n)
     end
 end
 
-function relative_power(fhm,freqs)
+function relative_power_from_mean(fhm,freqs)
     df = freqs[2]-freqs[1]
     n = size(fhm)[2]
     αband = findall(@. freqs>4.0 && freqs<22)
@@ -469,6 +480,16 @@ function relative_power(fhm,freqs)
     end
 
     return α,γ
+end
+
+function relative_power_from_segments(freqs,tfhm)
+    df = freqs[2]-freqs[1]
+    αband = findall(@. freqs>4.0 && freqs<22)
+    γband = findall(@. freqs>32.0 && freqs<48.0)
+    α = sum(tfhm[αband,:],dims=1)[1,:]*df 
+    γ = sum(tfhm[γband,:],dims=1)[1,:]*df 
+    tot = sum(tfhm[:,:],dims=1)[1,:]*df 
+    return α,γ,tot
 end
 
 

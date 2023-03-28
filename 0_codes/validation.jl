@@ -12,7 +12,6 @@
  sum(abs.(bip-(ch1-ch3)/(2*20.0)))
 
  # Check CSD ---------------------------------------------------
-  # Check CSD ---------------------------------------------------
  t,cs=read_channel(100,t0,tf,"csd_pre");
  t,ch5=read_channel(201,t0,tf,"pre");
  t,ch3=read_channel(199,t0,tf,"pre");
