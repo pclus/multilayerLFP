@@ -5,8 +5,30 @@ push!(LOAD_PATH, pwd())
 using NeuropixelAnalysis,SpectralAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 using FFTW
+using StatsBase
 
+# ------------------------------
+# autocorrelations:
+n = 136
+lags = 0:10:2500*2
+fl="cortex_pre"
+ac=zeros(n,length(lags))
+for id in 0:n-1
+    t, y = read_channel(id, 4e-4, 900, fl);
+    ac[id+1,:] = autocor(y,lags)
+end
+m_ac = mean(ac,dims=1)[1,:];
+s_ac = std(ac,dims=1)[1,:];
+dt = 1/2500.0;
+plot(lags,zeros(length(lags)),lc=:black)
+plot!(lags*dt,m_ac,ribbon=2.0*s_ac,xlim=(0,1.0),lc=1,fillcolor=1,fillalpha=0.5,
+xlabel = "time lag [s]", ylabel= "autocorrelation",legend=false,
+frame=:frame,grid=:false,showaxis=:true)
+savefig("~/Desktop/Fig_autocor.png")
 
+# ------------------------------
+
+id=100; fl="cortex_pre"; Δt=10.0
 
 id=100; fl="cortex_pre"; Δt=10.0; mov_filter="pre";
 q,q0,tfhm,tfhm0,f = spectral_stationarity(id,fl,Δt,mov_filter)
@@ -30,6 +52,17 @@ pvals = zeros(length(lseg),length(0:5:n-1))
         pvals[i,j] = pvalue(ApproximateTwoSampleKSTest(q0, q))
     end
 end
+writedlm("../4_outputs/pvals_surr_deltat.dat",pvals," ")
+pvals = readdlm("../4_outputs/pvals_surr_deltat.dat")
+pm = mean(pvals,dims=2)
+ps = std(pvals,dims=2)
+# dotplot(pvals',yaxis=:log)
+scatter(lseg,pvals,lt=:scatter,legend=false,yaxis=:log,mc=1,msw=0,ms=3)
+plot!(lseg,pm, yaxis=:log,ylim=(1e-10,1.0),yticks=(10.0.^(-10:0)),lc=:black)
+plot!(xlabel="time window "*L"\Delta t"*" [s]",
+    ylabel = L"p_\mathrm{KS}"
+)
+savefig("~/Desktop/Fig_timewindow.png")
 
 # plots
 using LaTeXStrings,StatsPlots,Printf
@@ -106,3 +139,19 @@ end
 
 plot(pvals,xlabel="Channel", ylabel="KS p-value",yaxis=:log, lt=:scatter,legend=:false)
 savefig("~/Desktop/Fig4.png")
+
+
+
+using Gnuplot
+@gp "
+unset key
+set lmargin 10;
+set rmargin 5;
+set log zcb;
+set pale @RAINBOW;
+set yrange[0:100];
+set xrange[0:900];
+set cbrange[1e-17:*];
+set xlabel 'time [s]';
+set ylabel 'freq. [Hz]'; " :-
+@gp :- tfhmr "origin=(5,0) dx=1 dy=0.01 w image pixels" 
