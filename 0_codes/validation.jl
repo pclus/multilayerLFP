@@ -211,3 +211,18 @@ heatmap(m4) #amazing
 
 plotlyjs()
 plot([blfp_pre[:,100],blfp_post[:,100]],labels=["pre" "post"],yaxis=:log)
+
+# Check of phase relation between freqs...we see nothing
+rate = 2500;
+id=100; fl="cortex_pre"; Δt=10.0; 
+dt = 1/rate;
+t, y = read_channel(id, 4e-4, 900, fl);
+T  = length(y)/rate;
+ns = Int(T / Δt);
+
+S = rfft(y); 
+f = rfftfreq(length(t), 1.0/dt); 
+ϕ = angle.(S)
+ϕm = mean(reshape(ϕ[1:end-1],(1000,:)),dims=1)[1,:]
+ϕs = std(reshape(ϕ[1:end-1],(1000,:)),dims=1)[1,:]
+plot(f[1:1000:end-1],ϕm,yerr=ϕs,xlim=(0,100))

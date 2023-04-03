@@ -1,7 +1,7 @@
 #!/usr/bin/env -S julia --threads 16
 
-push!(LOAD_PATH, "/home/pclusella/Documents/Data/UPO-tACs/0_codes/")
-cd("/home/pclusella/Documents/Data/UPO-tACs/0_codes/")
+cd("0_codes/")
+push!(LOAD_PATH, pwd())
 using NeuropixelAnalysis,SpectralAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 using FFTW
@@ -20,6 +20,16 @@ p = pvalue(KSampleADTest(q0,q; modified = true, nsim = 0))
 pr_perm = pvalue(ApproximatePermutationTest(qr0, qr, mean, 1000))
 pr_KS = pvalue(ApproximateTwoSampleKSTest(qr0, qr))
 pr_AD = pvalue(KSampleADTest(qr0,qr; modified = true, nsim = 0))
+
+n=136
+lseg = [1.0, 5.0, 10.0, 20.0, 30.0, 50.0, 60.0, 90.0]
+pvals = zeros(length(lseg),length(0:5:n-1))
+@Threads.threads for (j,id) in collect(enumerate(0:5:n-1))
+    for (i,Δt) in enumerate(lseg)
+        q,q0,tfhm,tfhm0,f = spectral_stationarity(id,fl,Δt,mov_filter)
+        pvals[i,j] = pvalue(ApproximateTwoSampleKSTest(q0, q))
+    end
+end
 
 # plots
 using LaTeXStrings,StatsPlots,Printf

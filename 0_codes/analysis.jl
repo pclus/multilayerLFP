@@ -5,7 +5,6 @@ push!(LOAD_PATH, pwd())
 using NeuropixelAnalysis,SpectralAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 
-
 id=100; fl="cortex_pre"; Δt=10.0
 t, f, tfhm = timefreq(id, fl, Δt);
 idx, tfhm = movfilter(t, tfhm, "pre")
