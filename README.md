@@ -22,16 +22,12 @@
 
 The "pre" and "post" data in the original Matlab file have been transcribed to binary files for convenience.
 The "pre" data has been stored in `1_data/pre.bin`, and the "post" data has been stored in `1_data/pre.bin`.
-These files have been created by running this code in Matlab:
+These files have been created by running the code `tobinary.m` in Matlab (remember it is possible to run matlab from a terminal with `matlab -nodesktop`).
+This can be done from the command line with:
 
 ```
-mf=matfile('1_data/raw/Suj9.mat');
-
-pre=mf.Suj9(1,1);
-fid=fopen("pre.bin","w"); fwrite(fid,pre{1}(384:-1:1,:)','double'); fclose(fid)
-
-post=mf.Suj9(2,1);
-fid=fopen("post.bin","w"); fwrite(fid,post{1}(384:-1:1,:)','double'); fclose(fid)
+FN=\'/media/pclusella/Pandora/UPO_data/suj8.mat\'
+matlab -nodesktop -nosplash -nodisplay -r "tobinary($FN); exit()"
 ```
 
 Notice that, in the original Matlab matrices, the order of the channels has been inverted (i.e., `Suj{1}(1,:)` contains the data for channel 384).
