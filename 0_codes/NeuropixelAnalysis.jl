@@ -20,7 +20,8 @@ julia> v158=read_channel(158,0.0004,900,"filtered_pre");
 function read_channel(id, t0, tf, fl) # Equivalent to the read_binary.c code
     id = Int(id)
     n = 384
-    m = 2250000
+    # m = 2250000
+    m = 9000000
     dt = 1.0 / 2500.0
 
 
@@ -55,7 +56,7 @@ function cut_cortex(fl,n0,nf)
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
-    tf = 900.0
+    tf = 3600.0
 
     # bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=2500), Butterworth(3))
     # bsfilter = digitalfilter(Bandstop(49.95,50.05; fs=rate),Butterworth(1))
@@ -83,12 +84,12 @@ function bandpass_filter(fl)
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
-    tf = 900.0
+    tf = 3600.0
     n = 384
 
     bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=rate), Butterworth(3))
-    bsfilter  = digitalfilter(Bandstop(49.9,50.1; fs=rate),Butterworth(1))
-    bsfilter2 = digitalfilter(Bandstop(59.9,60.1; fs=rate),Butterworth(1))
+    # bsfilter  = digitalfilter(Bandstop(49.9,50.1; fs=rate),Butterworth(1))
+    # bsfilter2 = digitalfilter(Bandstop(59.9,60.1; fs=rate),Butterworth(1))
 
     fout = open("../1_data/filtered_" * fl * ".bin", "w")
 
@@ -114,7 +115,7 @@ function compute_bipolar(flin,flout,n)
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
-    tf = 900.0
+    tf = 3600.0
 
     fout = open("../1_data/"* flout * ".bin", "w")
 
@@ -162,7 +163,7 @@ function compute_csd(flin,flout,n)
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
-    tf = 900.0
+    tf = 3600.0
 
     fout = open("../1_data/" * flout * ".bin", "w")
 
@@ -218,38 +219,38 @@ function channel_idx(ch_id)
     return i
 end
 
-"""
-    heatmapMT(t0, tf, fl, channels)
+# """
+#     heatmapMT(t0, tf, fl, channels)
     
-Computes the spectral heatmap with Multitaper PSD for specific channels and a time frame
-"""
-function heatmapMT(t0, tf, fl, channels)
+# Computes the spectral heatmap with Multitaper PSD for specific channels and a time frame
+# """
+# function heatmapMT(t0, tf, fl, channels)
 
-    rate = 2500.0
-    dt = 1.0 / rate
-    n = size(channels, 1)
-    m = 250001
-    NW = 1.0 * m * dt / (2.0)  #bandwith is W*dt/2.0, and NW = N*W*dt/2.0
-    K = 8    # number of tappers (should be less than 2*NW)
+#     rate = 2500.0
+#     dt = 1.0 / rate
+#     n = size(channels, 1)
+#     m = 250001
+#     NW = 1.0 * m * dt / (2.0)  #bandwith is W*dt/2.0, and NW = N*W*dt/2.0
+#     K = 8    # number of tappers (should be less than 2*NW)
 
-    l = 30002 # WARNING: This assumes relevant frequencies below entry l of the spectra
-    hm = zeros(n, l)
+#     l = 30002 # WARNING: This assumes relevant frequencies below entry l of the spectra
+#     hm = zeros(n, l)
 
-    local S
-    Threads.@threads for id in channels
-        t, chdat = read_channel(id, t0, tf, fl)
-        S = multispec(chdat, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=true)
-        hm[id+1, :] = S.S[1:l]
-        if id % 5 == 0
-            print(id, "\r")
-            flush(stdout)
-        end
-    end
-    print(stdout, "\n")
-    freqs = collect(S.f[1:l])
+#     local S
+#     Threads.@threads for id in channels
+#         t, chdat = read_channel(id, t0, tf, fl)
+#         S = multispec(chdat, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=true)
+#         hm[id+1, :] = S.S[1:l]
+#         if id % 5 == 0
+#             print(id, "\r")
+#             flush(stdout)
+#         end
+#     end
+#     print(stdout, "\n")
+#     freqs = collect(S.f[1:l])
 
-    freqs, hm
-end
+#     freqs, hm
+# end
 
 """
     timefreq(id, fl)
