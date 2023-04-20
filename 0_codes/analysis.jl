@@ -65,7 +65,6 @@ p2 = plot!(spost[data][:,4],dp[data],
 xlim=(0,1),msc=:auto,
 xlabel = "Rel. power (post)", ylabel = "depth [μm]")
 
-
 plot(-spre[data][:,3]+spost[data][:,3],dp[data])
 p3 = plot!(-spre[data][:,4]+spost[data][:,4],dp[data],xlim=(-0.2,0.2),
 xlabel = "Difference (post-pre)", ylabel = "depth [μm]")
