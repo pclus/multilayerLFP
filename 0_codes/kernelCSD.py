@@ -42,7 +42,8 @@ def read_data(t0,tf,fl):
     mf=int(np.ceil(tf/dt))
     mm = mf-m0
     n=384
-    m = 2250000; 
+    # m = 2250000; 
+    m = 9000000; 
     data=np.zeros((n,mm))
     with open("/home/pclusella/Documents/Data/UPO-tACs/1_data/filtered_"+fl+".bin", "rb") as fin:
         data[0,:]=np.fromfile(fin, dtype=np.double, count=mm, sep='',offset=8*m0)
@@ -150,7 +151,7 @@ def validate():
 #     return est_csd;
 
 def export_at_centers(opts,fl):
-    pots =read_data(0.0004,900.0,fl)
+    pots =read_data(0.0004,3600.0,fl)
     n0=226;
     nf=361;
     pots,opts=select_cortex(pots,opts,n0,nf)

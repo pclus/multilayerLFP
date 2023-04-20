@@ -17,11 +17,11 @@ from the binary file identified by `fl`.
 julia> v158=read_channel(158,0.0004,900,"filtered_pre");
 ```
 """
-function read_channel(id, t0, tf, fl) # Equivalent to the read_binary.c code
+function read_channel(id, t0, tf, fl, m=9000000) # Equivalent to the read_binary.c code
     id = Int(id)
     n = 384
     # m = 2250000
-    m = 9000000
+    # m = 9000000
     dt = 1.0 / 2500.0
 
 
@@ -51,58 +51,61 @@ Read the channels listed in the array `channels` from the "fl" binary file,
 filter them, and write in a 'cortex_'*fl binary file.
 Already bandpass_filtered.
 """
-function cut_cortex(fl,n0,nf) 
+function cut_cortex(fl,n0,nf,m=9000000) 
 
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
-    tf = 3600.0
-
-    # bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=2500), Butterworth(3))
-    # bsfilter = digitalfilter(Bandstop(49.95,50.05; fs=rate),Butterworth(1))
+    tf = dt*m
 
     fout = open("../1_data/cortex_" * fl * ".bin", "w")
-
-    for id in n0:nf
-        t, ch = read_channel(id, t0, tf, "filtered_"*fl)
-        # fil_ch = filtfilt(bpfilter, ch)
-        # fil_ch = filtfilt(bsfilter, fil_ch)
-        write(fout, ch)
-    end
-    close(fout)
-end
-
-
-"""
-    bandpass_filter(fl)
-
-Bandpass filter all data from binary file referenced by `fl` between 1 and 300Hz.
-Uses a Butterworth filter of order 3 and it stores it in a new binary file 
-named `../1_data/filtered_...`.
-"""
-function bandpass_filter(fl) 
-    rate = 2500.0
-    dt = 1 / rate
-    t0 = dt
-    tf = 3600.0
-    n = 384
 
     bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=rate), Butterworth(3))
     # bsfilter  = digitalfilter(Bandstop(49.9,50.1; fs=rate),Butterworth(1))
     # bsfilter2 = digitalfilter(Bandstop(59.9,60.1; fs=rate),Butterworth(1))
 
-    fout = open("../1_data/filtered_" * fl * ".bin", "w")
-
-    for id in 0:n-1
-        t, ch = read_channel(id, t0, tf, fl)
+    for id in n0:nf
+        t, ch = read_channel(id, t0, tf, fl,m)
         fil_ch = filtfilt(bpfilter, ch)
-        fil_ch = filtfilt(bsfilter, fil_ch)
-        fil_ch = filtfilt(bsfilter2, fil_ch)
+        # fil_ch = filtfilt(bsfilter, fil_ch)
+        # fil_ch = filtfilt(bsfilter2, fil_ch)
         write(fout, fil_ch)
     end
     close(fout)
-
 end
+
+# DEPRECATED: Merged with cut_cortex to optimize space-------------------------------
+# """
+#     bandpass_filter(fl)
+
+# Bandpass filter all data from binary file referenced by `fl` between 1 and 300Hz.
+# Uses a Butterworth filter of order 3 and it stores it in a new binary file 
+# named `../1_data/filtered_...`.
+# """
+# function bandpass_filter(fl,m=9000000) 
+#     rate = 2500.0
+#     dt = 1 / rate
+#     t0 = dt
+#     tf = dt*m
+#     n = 384
+
+#     bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=rate), Butterworth(3))
+#     # bsfilter  = digitalfilter(Bandstop(49.9,50.1; fs=rate),Butterworth(1))
+#     # bsfilter2 = digitalfilter(Bandstop(59.9,60.1; fs=rate),Butterworth(1))
+
+#     fout = open("../1_data/filtered_" * fl * ".bin", "w")
+
+#     for id in 0:n-1
+#         t, ch = read_channel(id, t0, tf, fl, m)
+#         fil_ch = filtfilt(bpfilter, ch)
+#         # fil_ch = filtfilt(bsfilter, fil_ch)
+#         # fil_ch = filtfilt(bsfilter2, fil_ch)
+#         write(fout, fil_ch)
+#     end
+#     close(fout)
+
+# end
+# -------------------------------
 
 """
     compute_bipolar(fl)
@@ -111,27 +114,27 @@ Store in a binary file the bipolar data obtained by computing the first
 derivative of the data using a symmetric stencil in along each neuropixel column.
 SHOULD BE CHANGED TO TAKE next-current INSTEAD OF next-previous
 """
-function compute_bipolar(flin,flout,n)
+function compute_bipolar(flin,flout,n,m=9000000)
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
-    tf = 3600.0
+    tf = m*dt
 
     fout = open("../1_data/"* flout * ".bin", "w")
 
-    t, prev_a = read_channel(0, t0, tf, flin)
-    t, prev_b = read_channel(1, t0, tf, flin)
-    t, prev_c = read_channel(2, t0, tf, flin)
-    t, prev_d = read_channel(3, t0, tf, flin)
+    t, prev_a = read_channel(0, t0, tf, flin, m)
+    t, prev_b = read_channel(1, t0, tf, flin, m)
+    t, prev_c = read_channel(2, t0, tf, flin, m)
+    t, prev_d = read_channel(3, t0, tf, flin, m)
 
     inv_dy = 1 / 20.0 # 1/μm
 
     nf = n - n%4 
     for id in 4:4:nf-1
-        t, curr_a = read_channel(id    , t0, tf, flin)
-        t, curr_b = read_channel(id + 1, t0, tf, flin)
-        t, curr_c = read_channel(id + 2, t0, tf, flin)
-        t, curr_d = read_channel(id + 3, t0, tf, flin)
+        t, curr_a = read_channel(id    , t0, tf, flin, m)
+        t, curr_b = read_channel(id + 1, t0, tf, flin, m)
+        t, curr_c = read_channel(id + 2, t0, tf, flin, m)
+        t, curr_d = read_channel(id + 3, t0, tf, flin, m)
 
         bip_a = - inv_dy * (prev_a - curr_a)
         bip_b = - inv_dy * (prev_b - curr_b)
@@ -159,18 +162,18 @@ end
 Store in a binary file the CSD obtained by computing the Laplacian 
 using a 2-dimensional diagonal finite difference stencil.
 """
-function compute_csd(flin,flout,n)
+function compute_csd(flin,flout,n,m=9000000)
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
-    tf = 3600.0
+    tf = dt*m
 
     fout = open("../1_data/" * flout * ".bin", "w")
 
-    t, ch_5 = read_channel(0, t0, tf, flin)
-    t, ch_6 = read_channel(1, t0, tf, flin)
-    t, ch_7 = read_channel(2, t0, tf, flin)
-    t, ch_8 = read_channel(3, t0, tf, flin)
+    t, ch_5 = read_channel(0, t0, tf, flin, m)
+    t, ch_6 = read_channel(1, t0, tf, flin, m)
+    t, ch_7 = read_channel(2, t0, tf, flin, m)
+    t, ch_8 = read_channel(3, t0, tf, flin, m)
 
     inv_dy2 = 1 / 25.61^2 # 1/μm
     σ = 1.0 # conductivity S/μm or 1/ (Ω μm)
@@ -183,10 +186,10 @@ function compute_csd(flin,flout,n)
         ch_3 = ch_7
         ch_4 = ch_8
 
-        t, ch_5 = read_channel(id + 0, t0, tf, flin)
-        t, ch_6 = read_channel(id + 1, t0, tf, flin)
-        t, ch_7 = read_channel(id + 2, t0, tf, flin)
-        t, ch_8 = read_channel(id + 3, t0, tf, flin)
+        t, ch_5 = read_channel(id + 0, t0, tf, flin, m)
+        t, ch_6 = read_channel(id + 1, t0, tf, flin, m)
+        t, ch_7 = read_channel(id + 2, t0, tf, flin, m)
+        t, ch_8 = read_channel(id + 3, t0, tf, flin, m)
 
         csd_right = -σ * inv_dy2 * (-4.0 * ch_4 + ch_1 + ch_2 + ch_5 + ch_6)
         csd_left  = -σ * inv_dy2 * (-4.0 * ch_5 + ch_3 + ch_4 + ch_7 + ch_8)
@@ -259,7 +262,7 @@ Computes the time-frequency heatmap with MT-PSD using segments of 10s
 """
 function timefreq(id::Integer, fl::String, Δt=10.0)
 
-    t, y = read_channel(id, 4e-4, 900.0, fl)    # time series starts at 4e-4
+    t, y = read_channel(id, 4e-4, 900.0, fl, m)    # time series starts at 4e-4
     timefreq(y,Δt)
 end
 
@@ -314,16 +317,16 @@ end
     Bandpass-filters the pre and post data, and computes the CSD 
     and bipolar binary files. 
 """
-function process_data(n0,nf)
+function process_data(n0,nf,mpre=9000000,mpost=9000000)
     n=length(n0:nf)
-    bandpass_filter("pre")
-    bandpass_filter("post")
-    cut_cortex("pre",n0,nf)
-    cut_cortex("post",n0,nf)
-    compute_bipolar("cortex_pre","bipolar_pre",n)   
-    compute_bipolar("cortex_post","bipolar_post",n) 
-    compute_csd("cortex_pre","csd_pre",n)           
-    compute_csd("cortex_post","csd_post",n)         
+    # bandpass_filter("pre", mpre)
+    # bandpass_filter("post", mpost)
+    cut_cortex("pre",n0,nf, mpre)
+    cut_cortex("post",n0,nf, mpost)
+    compute_bipolar("cortex_pre","bipolar_pre",n,mpre)   
+    compute_bipolar("cortex_post","bipolar_post",n,mpost) 
+    compute_csd("cortex_pre","csd_pre",n,mpre)           
+    compute_csd("cortex_post","csd_post",n,mpost)         
 end
 
 """
@@ -529,38 +532,38 @@ function load_precomputed_std()
     return [lfp_pre,blfp_pre,csd_pre,kcsd_pre,lfp_post,blfp_post,csd_post,kcsd_post]
 end
 
-function timefreq_complete(id, fl)
+# function timefreq_complete(id, fl)
 
-    rate = 2500.0
-    dt = 1.0 / rate
-    n = 384
-    Δt = 10.0      # segment duration (10 seconds)
-    ns = Int(900.0 / Δt)  # number of segments
-    m = Int(2250000 / ns) # segments of 10 seconds
-    mh = m/2;       # length of the MT spectra...
-    l = Int(mh)       # but...up to l is enough to get the relevant freqs
-    NW = 1.0 * m * dt / (2.0)
-    K = 8
-    t, chdat = read_channel(id, 4e-4, 900, fl)    # time series starts at 4e-4
+#     rate = 2500.0
+#     dt = 1.0 / rate
+#     n = 384
+#     Δt = 10.0      # segment duration (10 seconds)
+#     ns = Int(900.0 / Δt)  # number of segments
+#     m = Int(2250000 / ns) # segments of 10 seconds
+#     mh = m/2;       # length of the MT spectra...
+#     l = Int(mh)       # but...up to l is enough to get the relevant freqs
+#     NW = 1.0 * m * dt / (2.0)
+#     K = 8
+#     t, chdat = read_channel(id, 4e-4, 900, fl, m)    # time series starts at 4e-4
 
 
-    tfhm = zeros(l, ns)   # time-freq heatmap
-    local S    # so that S exists outside the loop
-    for s in 1:ns
-        segdat = chdat[((s-1)*m+1):s*m]
-        S = multispec(segdat, dt=dt, NW=NW, K=K)
-        tfhm[:, s] = S.S[1:l]
-        if s % 5 == 0
-            print(s, "\r")
-            flush(stdout)
-        end
-    end
+#     tfhm = zeros(l, ns)   # time-freq heatmap
+#     local S    # so that S exists outside the loop
+#     for s in 1:ns
+#         segdat = chdat[((s-1)*m+1):s*m]
+#         S = multispec(segdat, dt=dt, NW=NW, K=K)
+#         tfhm[:, s] = S.S[1:l]
+#         if s % 5 == 0
+#             print(s, "\r")
+#             flush(stdout)
+#         end
+#     end
 
-    freqs = collect(S.f[1:l])
-    times = collect(5:10:900)
+#     freqs = collect(S.f[1:l])
+#     times = collect(5:10:900)
 
-    times, freqs, tfhm
-end
+#     times, freqs, tfhm
+# end
 
 
 end # module
