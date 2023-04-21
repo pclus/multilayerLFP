@@ -1,10 +1,11 @@
 module NeuropixelAnalysis
 
-using DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTests
+using DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTests,FFTW
 
-export DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTest
-export read_channel,channel_idx,heatmapMT,timefreq,movfilter,heatmap_segments,
+export DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTest,FFTW
+export read_channel,channel_idx,heatmapMT,timefreq,movfilter,
 process_data,relative_power,depth,prepost_analysis
+export logspectral_dist
 
 """
     read_channel(id, t0, tf, fl)
@@ -17,10 +18,9 @@ from the binary file identified by `fl`.
 julia> v158=read_channel(158,0.0004,900,"filtered_pre");
 ```
 """
-function read_channel(id, t0, tf, fl) # Equivalent to the read_binary.c code
+function read_channel(id,fl; t0 = 0.0004, tf=3600.0, m=9000000) # Equivalent to the read_binary.c code
     id = Int(id)
     n = 384
-    m = 2250000
     dt = 1.0 / 2500.0
 
 
@@ -38,8 +38,6 @@ function read_channel(id, t0, tf, fl) # Equivalent to the read_binary.c code
     channel = data[m0:mf]
     t = collect(dt * (m0:mf))
 
-    # writedlm("../temp.dat",[t channel]," ");
-
     return t, channel
 end
 
@@ -50,58 +48,29 @@ Read the channels listed in the array `channels` from the "fl" binary file,
 filter them, and write in a 'cortex_'*fl binary file.
 Already bandpass_filtered.
 """
-function cut_cortex(fl,n0,nf) 
+function cut_cortex(fl,n0,nf,m=9000000) 
 
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
-    tf = 900.0
-
-    # bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=2500), Butterworth(3))
-    # bsfilter = digitalfilter(Bandstop(49.95,50.05; fs=rate),Butterworth(1))
+    tf = dt*m
 
     fout = open("../1_data/cortex_" * fl * ".bin", "w")
 
-    for id in n0:nf
-        t, ch = read_channel(id, t0, tf, "filtered_"*fl)
-        # fil_ch = filtfilt(bpfilter, ch)
-        # fil_ch = filtfilt(bsfilter, fil_ch)
-        write(fout, ch)
-    end
-    close(fout)
-end
-
-
-"""
-    bandpass_filter(fl)
-
-Bandpass filter all data from binary file referenced by `fl` between 1 and 300Hz.
-Uses a Butterworth filter of order 3 and it stores it in a new binary file 
-named `../1_data/filtered_...`.
-"""
-function bandpass_filter(fl) 
-    rate = 2500.0
-    dt = 1 / rate
-    t0 = dt
-    tf = 900.0
-    n = 384
-
     bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=rate), Butterworth(3))
-    bsfilter  = digitalfilter(Bandstop(49.9,50.1; fs=rate),Butterworth(1))
-    bsfilter2 = digitalfilter(Bandstop(59.9,60.1; fs=rate),Butterworth(1))
+    # bsfilter  = digitalfilter(Bandstop(49.9,50.1; fs=rate),Butterworth(1))
+    # bsfilter2 = digitalfilter(Bandstop(59.9,60.1; fs=rate),Butterworth(1))
 
-    fout = open("../1_data/filtered_" * fl * ".bin", "w")
-
-    for id in 0:n-1
-        t, ch = read_channel(id, t0, tf, fl)
+    for id in n0:nf
+        t, ch = read_channel(id, fl; t0=t0, tf=tf,m=m)
         fil_ch = filtfilt(bpfilter, ch)
-        fil_ch = filtfilt(bsfilter, fil_ch)
-        fil_ch = filtfilt(bsfilter2, fil_ch)
+        # fil_ch = filtfilt(bsfilter, fil_ch)
+        # fil_ch = filtfilt(bsfilter2, fil_ch)
         write(fout, fil_ch)
     end
     close(fout)
-
 end
+
 
 """
     compute_bipolar(fl)
@@ -110,27 +79,27 @@ Store in a binary file the bipolar data obtained by computing the first
 derivative of the data using a symmetric stencil in along each neuropixel column.
 SHOULD BE CHANGED TO TAKE next-current INSTEAD OF next-previous
 """
-function compute_bipolar(flin,flout,n)
+function compute_bipolar(flin,flout,n,m=9000000)
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
-    tf = 900.0
+    tf = m*dt
 
     fout = open("../1_data/"* flout * ".bin", "w")
 
-    t, prev_a = read_channel(0, t0, tf, flin)
-    t, prev_b = read_channel(1, t0, tf, flin)
-    t, prev_c = read_channel(2, t0, tf, flin)
-    t, prev_d = read_channel(3, t0, tf, flin)
+    t, prev_a = read_channel(0, flin; t0=t0, tf=tf, m=m)
+    t, prev_b = read_channel(1, flin; t0=t0, tf=tf, m=m)
+    t, prev_c = read_channel(2, flin; t0=t0, tf=tf, m=m)
+    t, prev_d = read_channel(3, flin; t0=t0, tf=tf, m=m)
 
     inv_dy = 1 / 20.0 # 1/μm
 
     nf = n - n%4 
     for id in 4:4:nf-1
-        t, curr_a = read_channel(id    , t0, tf, flin)
-        t, curr_b = read_channel(id + 1, t0, tf, flin)
-        t, curr_c = read_channel(id + 2, t0, tf, flin)
-        t, curr_d = read_channel(id + 3, t0, tf, flin)
+        t, curr_a = read_channel(id    , flin; t0=t0, tf=tf, m=m)
+        t, curr_b = read_channel(id + 1, flin; t0=t0, tf=tf, m=m)
+        t, curr_c = read_channel(id + 2, flin; t0=t0, tf=tf, m=m)
+        t, curr_d = read_channel(id + 3, flin; t0=t0, tf=tf, m=m)
 
         bip_a = - inv_dy * (prev_a - curr_a)
         bip_b = - inv_dy * (prev_b - curr_b)
@@ -158,18 +127,18 @@ end
 Store in a binary file the CSD obtained by computing the Laplacian 
 using a 2-dimensional diagonal finite difference stencil.
 """
-function compute_csd(flin,flout,n)
+function compute_csd(flin,flout,n,m=9000000)
     rate = 2500.0
     dt = 1 / rate
     t0 = dt
-    tf = 900.0
+    tf = dt*m
 
     fout = open("../1_data/" * flout * ".bin", "w")
 
-    t, ch_5 = read_channel(0, t0, tf, flin)
-    t, ch_6 = read_channel(1, t0, tf, flin)
-    t, ch_7 = read_channel(2, t0, tf, flin)
-    t, ch_8 = read_channel(3, t0, tf, flin)
+    t, ch_5 = read_channel(0, flin; t0=t0, tf=tf, m=m)
+    t, ch_6 = read_channel(1, flin; t0=t0, tf=tf, m=m)
+    t, ch_7 = read_channel(2, flin; t0=t0, tf=tf, m=m)
+    t, ch_8 = read_channel(3, flin; t0=t0, tf=tf, m=m)
 
     inv_dy2 = 1 / 25.61^2 # 1/μm
     σ = 1.0 # conductivity S/μm or 1/ (Ω μm)
@@ -182,10 +151,10 @@ function compute_csd(flin,flout,n)
         ch_3 = ch_7
         ch_4 = ch_8
 
-        t, ch_5 = read_channel(id + 0, t0, tf, flin)
-        t, ch_6 = read_channel(id + 1, t0, tf, flin)
-        t, ch_7 = read_channel(id + 2, t0, tf, flin)
-        t, ch_8 = read_channel(id + 3, t0, tf, flin)
+        t, ch_5 = read_channel(id + 0, flin; t0=t0, tf=tf, m=m)
+        t, ch_6 = read_channel(id + 1, flin; t0=t0, tf=tf, m=m)
+        t, ch_7 = read_channel(id + 2, flin; t0=t0, tf=tf, m=m)
+        t, ch_8 = read_channel(id + 3, flin; t0=t0, tf=tf, m=m)
 
         csd_right = -σ * inv_dy2 * (-4.0 * ch_4 + ch_1 + ch_2 + ch_5 + ch_6)
         csd_left  = -σ * inv_dy2 * (-4.0 * ch_5 + ch_3 + ch_4 + ch_7 + ch_8)
@@ -219,54 +188,21 @@ function channel_idx(ch_id)
 end
 
 """
-    heatmapMT(t0, tf, fl, channels)
-    
-Computes the spectral heatmap with Multitaper PSD for specific channels and a time frame
-"""
-function heatmapMT(t0, tf, fl, channels)
-
-    rate = 2500.0
-    dt = 1.0 / rate
-    n = size(channels, 1)
-    m = 250001
-    NW = 1.0 * m * dt / (2.0)  #bandwith is W*dt/2.0, and NW = N*W*dt/2.0
-    K = 8    # number of tappers (should be less than 2*NW)
-
-    l = 30002 # WARNING: This assumes relevant frequencies below entry l of the spectra
-    hm = zeros(n, l)
-
-    local S
-    Threads.@threads for id in channels
-        t, chdat = read_channel(id, t0, tf, fl)
-        S = multispec(chdat, dt=dt, NW=NW, K=K, jk=true, Ftest=true, a_weight=true)
-        hm[id+1, :] = S.S[1:l]
-        if id % 5 == 0
-            print(id, "\r")
-            flush(stdout)
-        end
-    end
-    print(stdout, "\n")
-    freqs = collect(S.f[1:l])
-
-    freqs, hm
-end
-
-"""
     timefreq(id, fl)
 
 Computes the time-frequency heatmap with MT-PSD using segments of 10s
 """
-function timefreq(id::Integer, fl::String, Δt=10.0)
-
-    t, y = read_channel(id, 4e-4, 900.0, fl)    # time series starts at 4e-4
-    timefreq(y,Δt)
+function timefreq(id::Integer, fl::String; Δt=10.0, m=9000000)
+    dt = 0.0004
+    t, y = read_channel(id,fl ; t0=dt, tf=m*dt, m=m)    # time series starts at 4e-4
+    timefreq(y;Δt)
 end
 
-function timefreq(y::Vector{Float64},Δt=10.0)
+function timefreq(y::Vector{Float64};Δt=10.0)
     rate = 2500.0
     dt = 1.0 / rate
     T  = length(y)/rate     # total length
-    ns = Int(T / Δt)    # number of segments
+    ns = Int(floor(T / Δt))    # number of segments
     m = Int(rate*Δt)    # segments of 10 seconds
     l = Int(min(2000,Δt*rate/2+1))       # but...up to l is enough to get the relevant freqs
     NW = 1.0 * m * dt / (2.0)
@@ -284,9 +220,8 @@ function timefreq(y::Vector{Float64},Δt=10.0)
         end
     end
 
-
     freqs = collect(S.f[1:l])
-    times = collect(0.5*Δt:Δt:T)
+    times = collect(0.5*Δt:Δt:Δt*ns)
 
     times, freqs, tfhm
 end
@@ -297,10 +232,8 @@ end
 Authomatic removal of segments including movement data.
 This function assumes segments of Δt=10
 """
-function movfilter(t, tfhm, fl,Δt=10.0)
+function movfilter(t, tfhm, fl;Δt=10.0)
     mov_pre = readdlm("../1_data/mov_" * fl * ".dat", ' ')
-    # Δt = 10.0
-    # mov_indx = Int.(floor.(mov_pre ./ Δt) * Δt .+ 0.5*Δt)
     mov_indx = floor.(mov_pre ./ Δt) * Δt .+ 0.5*Δt
     indx = t .∈ [mov_indx]
     indx = findall(==(0), indx)
@@ -313,50 +246,14 @@ end
     Bandpass-filters the pre and post data, and computes the CSD 
     and bipolar binary files. 
 """
-function process_data(n0,nf)
+function process_data(n0,nf;mpre=9000000,mpost=9000000)
     n=length(n0:nf)
-    bandpass_filter("pre")
-    bandpass_filter("post")
-    cut_cortex("pre",n0,nf)
-    cut_cortex("post",n0,nf)
-    compute_bipolar("cortex_pre","bipolar_pre",n)   
-    compute_bipolar("cortex_post","bipolar_post",n) 
-    compute_csd("cortex_pre","csd_pre",n)           
-    compute_csd("cortex_post","csd_post",n)         
-end
-
-"""
-    heatmap_segments(fl)
-
-Create the segments of 10s, compute their MT spectra and provide their mean and standard deviation.
-This is done for all channels, removing the time segments that contain movement.
-"""
-function heatmap_segments(fl,n)
-    # n = 384;
-    l = 2000;
-
-    flmv=findall("_pre",fl)
-    if isempty(flmv)
-        flmv="post"
-    else
-        flmv="pre"
-    end
-
-    psd_mean_tfhm = zeros(n,l);
-    psd_std_tfhm  = zeros(n,l);
-
-    state = Threads.Atomic{Int}(0);
-    
-    Threads.@threads for id in 0:n-1
-        Threads.atomic_add!(state, 1)
-        print("--> ",state[]," out of ",n,"\n");
-        flush(stdout);
-        t,f,tfhm = timefreq(id,fl);
-        f_idx,f_tfhm = movfilter(t,tfhm,flmv);
-        psd_mean_tfhm[id+1,:] = mean(f_tfhm,dims=2);  
-        psd_std_tfhm[id+1,:] = std(f_tfhm,dims=2);
-    end
-    return psd_mean_tfhm,psd_std_tfhm
+    cut_cortex("pre",n0,nf, mpre)
+    cut_cortex("post",n0,nf, mpost)
+    compute_bipolar("cortex_pre","bipolar_pre",n,mpre)   
+    compute_bipolar("cortex_post","bipolar_post",n,mpost) 
+    compute_csd("cortex_pre","csd_pre",n,mpre)           
+    compute_csd("cortex_post","csd_post",n,mpost)         
 end
 
 
@@ -365,7 +262,7 @@ end
 
 Compute the mean spectra and perform comparison between pre and post for all datatypes.
 """
-function prepost_analysis(n0,nf)
+function prepost_analysis(n0,nf;mpre=9000000,mpost=9000000) # ISSUE: incorporate datatypes in the function call
     l = 2000;
     n=size(n0:nf)[1]
     ns=[ n, n, n/2-2,n-4,384]
@@ -377,28 +274,38 @@ function prepost_analysis(n0,nf)
     pvals_γ = Dict();
     for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
         n0=ns[i];
-        stats_band_pre[data], stats_band_post[data], pvals_α[data], pvals_γ[data] = prepost_comparison(data,n0)
+        stats_band_pre[data], stats_band_post[data], pvals_α[data], pvals_γ[data] =
+         prepost_comparison(data,n0;mpre = mpre , mpost = mpost)
     end
 
     return stats_band_pre, stats_band_post, pvals_α , pvals_γ
 end
 
 
-function prepost_comparison(data,n0)
+function prepost_comparison(data,n0; mpre=9000000, mpost=9000000, foutname = "temp_")
     l = 2000
 
     psd_mean_tfhm_pre = zeros(n0, l);
     psd_std_tfhm_pre = zeros(n0, l);
     psd_mean_tfhm_post = zeros(n0, l);
     psd_std_tfhm_post = zeros(n0, l);
-    pvals_tfhm = zeros(n0, l);
-    pvals_uneq_tfhm = zeros(n0, l);
+    # pvals_tfhm = zeros(n0, l);
+    # pvals_uneq_tfhm = zeros(n0, l);
     pvals_perm_tfhm = zeros(n0, l);
 
     stats_band_pre = zeros(n0,8)
     stats_band_post = zeros(n0,8)
     pvals_α = zeros(n0,2)
     pvals_γ = zeros(n0,2)
+
+
+    ns_pre = numberofsegments("pre";m=mpre)
+    ns_post = numberofsegments("post";m=mpost)
+    Q_pre = zeros(n0,ns_pre)
+    Q0_pre = zeros(n0,ns_pre)
+    Q_post = zeros(n0,ns_post)
+    Q0_post = zeros(n0,ns_post)
+    pvals_Q = zeros(n0,2)
 
     state = Threads.Atomic{Int}(0);
 
@@ -408,17 +315,24 @@ function prepost_comparison(data,n0)
         print("--> ", state[], " out of ", n0, "\n")
         flush(stdout)
 
+
         # Pre
-        t, f, tfhm = timefreq(id, data*"pre")
-        idx, tfhm_pre = movfilter(t, tfhm, "pre")
+        f,tfhm_pre,Q_pre[id+1,:],Q0_pre[id+1,:] = tfhm_analysis(id, data*"pre", "pre" ; m=mpre)
+        # t, f, tfhm = timefreq(id, data*"pre"; m = mpre)
+        # idx, tfhm_pre = movfilter(t, tfhm, "pre")
         psd_mean_tfhm_pre[id+1, :] = mean(tfhm_pre, dims=2)
         psd_std_tfhm_pre[id+1, :] = std(tfhm_pre, dims=2)
 
         # Post
-        t, f, tfhm = timefreq(id, data*"post")
-        idx, tfhm_post = movfilter(t, tfhm, "post")
+        f,tfhm_post,Q_post[id+1,:],Q0_post[id+1,:] = tfhm_analysis(id, data*"post", "post" ; m=mpost)
+        # t, f, tfhm = timefreq(id, data*"post"; m = mpost)
+        # idx, tfhm_post = movfilter(t, tfhm, "post")
         psd_mean_tfhm_post[id+1, :] = mean(tfhm_post, dims=2)
         psd_std_tfhm_post[id+1, :] = std(tfhm_post, dims=2)
+
+        # Compare Q and Q0
+        pvals_Q[id+1,1] = pvalue(ApproximateTwoSampleKSTest(Q_pre[id+1,:], Q0_pre[id+1,:]))
+        pvals_Q[id+1,2] = pvalue(ApproximateTwoSampleKSTest(Q_post[id+1,:], Q0_post[id+1,:]))
 
         # band analysis 
         α_pre, γ_pre, total_pre = relative_power_from_segments(f,tfhm_pre)
@@ -436,17 +350,103 @@ function prepost_comparison(data,n0)
         pvals_α[id+1,2] = pvalue(ApproximatePermutationTest(α_pre./total_pre, α_post./total_post, mean, 1000))
         pvals_γ[id+1,2] = pvalue(ApproximatePermutationTest(γ_pre./total_pre, γ_post./total_post, mean, 1000))
 
+
         # T-test. 
-        # for j in 1:l
-        #     pvals_uneq_tfhm[id+1, j] = pvalue(UnequalVarianceTTest(tfhm_pre[j, :], tfhm_post[j, :]))
-        #     pvals_tfhm[id+1, j] = pvalue(EqualVarianceTTest(tfhm_pre[j, :], tfhm_post[j, :]))# can be computed from the means
-        #     pvals_perm_tfhm[id+1,j] = pvalue(ApproximatePermutationTest(tfhm_pre[j, :], tfhm_post[j, :], mean, 1000))
-        # end
+        for j in 1:l
+            # pvals_uneq_tfhm[id+1, j] = pvalue(UnequalVarianceTTest(tfhm_pre[j, :], tfhm_post[j, :]))
+            # pvals_tfhm[id+1, j] = pvalue(EqualVarianceTTest(tfhm_pre[j, :], tfhm_post[j, :]))# can be computed from the means
+            pvals_perm_tfhm[id+1,j] = pvalue(ApproximatePermutationTest(tfhm_pre[j, :], tfhm_post[j, :], mean, 1000))
+        end
     end
 
-    return stats_band_pre, stats_band_post, pvals_α, pvals_γ
+    namebase = "../4_outputs/pipeline/"*foutname*data
+    writedlm(namebase*"tfhm_mean_post.dat",psd_mean_tfhm_post," ")
+    writedlm(namebase*"tfhm_mean_pre.dat",psd_mean_tfhm_pre," ")
+    writedlm(namebase*"tfhm_std_post.dat",psd_std_tfhm_post," ")
+    writedlm(namebase*"tfhm_std_pre.dat",psd_std_tfhm_pre," ")
+    writedlm(namebase*"tfhm_diff.dat",psd_mean_tfhm_post-psd_mean_tfhm_pre," ")
+    writedlm(namebase*"tfhm_pvals.dat",pvals_perm_tfhm," ")
+
+    writedlm(namebase*"band_stats_pre.dat",stats_band_pre," ")
+    writedlm(namebase*"band_stats_post.dat",stats_band_post," ")
+    writedlm(namebase*"band_pvals_alpha.dat",pvals_α," ")
+    writedlm(namebase*"band_pvals_gamma.dat",pvals_γ," ")
+
+    writedlm(namebase*"Q_pre.dat",Q_pre," ")
+    writedlm(namebase*"Q0_pre.dat",Q0_pre," ")
+    writedlm(namebase*"Q_post.dat",Q_post," ")
+    writedlm(namebase*"Q0_post.dat",Q0_post," ")
+
+    writedlm(namebase*"Q_pvals.dat",pvals_Q," ")
+
+    return stats_band_pre, stats_band_post, pvals_α, pvals_γ, Q_pre, Q0_pre, Q_post, Q0_post
 
 end
+
+function numberofsegments(fl;m=9000000,Δt=10.0)
+    rate = 2500.0
+    dt = 1.0 / rate
+    T  = m/rate     # total length
+    ns = Int(floor(T / Δt))    # number of segments
+    t = collect(0.5*Δt:Δt:Δt*ns)
+
+    mov_pre = readdlm("../1_data/mov_" * fl * ".dat", ' ')
+    mov_indx = floor.(mov_pre ./ Δt) * Δt .+ 0.5*Δt
+    indx = t .∈ [mov_indx]
+    indx = findall(==(0), indx)
+
+    return length(indx)
+end
+
+
+function tfhm_analysis(id, fl, flmov ; m,Δt=10.0)
+    rate = 2500;
+    dt = 0.0004
+    t, y = read_channel(id, fl; t0=dt, tf=m*dt, m=m)
+
+    T  = floor(length(y)/rate);
+    ns = Int(floor(T / Δt));
+    y = y[1:Int(floor(m/ns)*ns)]    
+
+    # clean up the segments containing movement directly in the time series
+    # #if !isempty(flmov)
+    # dts = T/ns;
+    ts = 0.5*Δt:Δt:ns*Δt
+    tr,yr = movfilter(ts,reshape(y,:,ns),flmov;Δt);
+    y=reshape(yr,:,1)[:,1];
+    # #end
+
+    # create surrogate
+    S = rfft(y); 
+    S0 = @. abs.(S)*exp(im*rand()*2*π);
+    y0 = irfft(S0,2*length(S0)-2);
+
+    # analyze real data
+    t, f, tfhm = timefreq(y);
+    smean = mean(tfhm,dims=2)[:,1];
+    sstd  = std(tfhm,dims=2)[:,1];
+
+    # analyze surrogate
+    ts,f,tfhm0 = timefreq(y0);
+    smean0 = mean(tfhm0,dims=2)[:,1];
+
+    ns = length(ts)
+        
+    q = [logspectral_dist(tfhm[:,i],smean,f) for i in 1:ns]
+    q0 = [logspectral_dist(tfhm0[:,i],smean0,f) for i in 1:ns]
+
+    return f,tfhm,q,q0
+end
+
+
+
+function logspectral_dist(s1,s2,f)
+    # y = @.  10*log10(s1/s2)^2
+    # integrate(f,y)^0.5 # maybe divided by f[end]^0.5
+    y = @. log10(s1/s2)^2
+    mean(y)^0.5 # maybe divided by f[end]^0.5
+end
+
 
 
 # skip: number of rows to skip; nrow = number of channels per row
@@ -527,39 +527,5 @@ function load_precomputed_std()
 
     return [lfp_pre,blfp_pre,csd_pre,kcsd_pre,lfp_post,blfp_post,csd_post,kcsd_post]
 end
-
-function timefreq_complete(id, fl)
-
-    rate = 2500.0
-    dt = 1.0 / rate
-    n = 384
-    Δt = 10.0      # segment duration (10 seconds)
-    ns = Int(900.0 / Δt)  # number of segments
-    m = Int(2250000 / ns) # segments of 10 seconds
-    mh = m/2;       # length of the MT spectra...
-    l = Int(mh)       # but...up to l is enough to get the relevant freqs
-    NW = 1.0 * m * dt / (2.0)
-    K = 8
-    t, chdat = read_channel(id, 4e-4, 900, fl)    # time series starts at 4e-4
-
-
-    tfhm = zeros(l, ns)   # time-freq heatmap
-    local S    # so that S exists outside the loop
-    for s in 1:ns
-        segdat = chdat[((s-1)*m+1):s*m]
-        S = multispec(segdat, dt=dt, NW=NW, K=K)
-        tfhm[:, s] = S.S[1:l]
-        if s % 5 == 0
-            print(s, "\r")
-            flush(stdout)
-        end
-    end
-
-    freqs = collect(S.f[1:l])
-    times = collect(5:10:900)
-
-    times, freqs, tfhm
-end
-
 
 end # module

@@ -7,12 +7,13 @@
  * Outputs time window for a specific channel.
  * 
  * Compile with:
- * gcc read_binary.c -o ../readbin -O3
+ * gcc read_binary.c -o ../readbin -lm -O3
  *
  * */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 /* New version (binary files are 2250000x384)*/
 int main(int argc, char **argv)

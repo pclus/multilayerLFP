@@ -26,7 +26,7 @@ These files have been created by running the code `tobinary.m` in Matlab (rememb
 This can be done from the command line with:
 
 ```
-FN=\'/media/pclusella/Pandora/UPO_data/suj8.mat\'
+FN=\'/media/pclusella/Pandora/UPO_data/suj9.mat\'
 matlab -nodesktop -nosplash -nodisplay -r "tobinary($FN); exit()"
 ```
 
@@ -34,6 +34,13 @@ Notice that, in the original Matlab matrices, the order of the channels has been
 In the binary files we revert back so that each channel ID matches its row in the file.
 Additionally, we transpose the matrix so that each column is the data from one channel.
 This is very convinient for later reading of the files, because Matlab stores matrices in column major.
+
+We have 12 subjects: 8,9,10,11,12,13,15,16,18,19,20,*27*
+
+Some comments about the data:
+	1. *Suj9* does not have the entire hour post-stimulations, it goes up to 7289726 time recordings instead of 9e6
+	2. *Suj19* does not have movement because it did not register.
+	3. *Suj27* is the one under anesthesia
 
 ### Reading binary files with C
 
