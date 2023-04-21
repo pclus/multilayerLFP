@@ -72,3 +72,10 @@ xlabel = "Difference (post-pre)", ylabel = "depth [μm]")
 
 plot(p1,p2,p3,layout=(1,3),labels=["α" "γ"],size=(800,450),lw=3)
 savefig("/home/pclusella/Desktop/"*data[1:end-1]*".png")
+
+# data to Martina:
+k1 = [ dp["bipolar_"][1:2:end] spre["bipolar_"][1:2:end,3] spre["bipolar_"][1:2:end,4]]
+writedlm("bipolar_relpow.dat",k1,' ')
+
+k2 = [ dp["kcsd_"][:] spre["kcsd_"][:,3] spre["kcsd_"][:,4]]
+writedlm("kcsd_relpow.dat",k2,' ')
