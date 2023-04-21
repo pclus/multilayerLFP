@@ -1,11 +1,34 @@
 module NeuropixelAnalysis
 
-using DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTests,FFTW
+using DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTests,FFTW,MAT
 
-export DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTest,FFTW
+export DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTest,FFTW,MAT
 export read_channel,channel_idx,heatmapMT,timefreq,movfilter,
 process_data,relative_power,depth,prepost_analysis
 export logspectral_dist
+
+
+"""
+    export_matfile(filename,varname)
+
+Reads the original matlab files and stores pre and post data as binaries,
+and the movement data in plain text.
+"""
+function export_matfile(filename,varname)
+    file = matopen(filename);
+    data = read(file,varname);
+    @views write("../1_data/pre.bin",data[1,1][384:-1:1,:]');
+    @views write("../1_data/post.bin",data[2,1][384:-1:1,:]');
+    writedlm("../1_data/mov_pre.dat",data[1,2],' ');
+    writedlm("../1_data/mov_post.dat",data[2,1],' ');
+    close(file)
+
+    mpre  = size(data[1,1])[1]
+    mpost = size(data[1,1])[2]
+    return mpre,mpost
+end
+
+
 
 """
     read_channel(id, t0, tf, fl)
@@ -262,20 +285,21 @@ end
 
 Compute the mean spectra and perform comparison between pre and post for all datatypes.
 """
-function prepost_analysis(n0,nf;mpre=9000000,mpost=9000000) # ISSUE: incorporate datatypes in the function call
+function prepost_analysis(n0,nf;mpre=9000000,mpost=9000000,foutname = "temp_") # ISSUE: incorporate datatypes in the function call
     l = 2000;
     n=size(n0:nf)[1]
-    ns=[ n, n, n/2-2,n-4,384]
+    ns=[n-4, n, n, n/2-2,]
     ns=Int.(ns)
 
     stats_band_pre = Dict();
     stats_band_post = Dict();
     pvals_α = Dict();
     pvals_γ = Dict();
-    for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
+    # for (i,data) in enumerate(("bipolar_","kcsd_","cortex_","csd_"))
+    for (i,data) in enumerate(("bipolar_",))
         n0=ns[i];
         stats_band_pre[data], stats_band_post[data], pvals_α[data], pvals_γ[data] =
-         prepost_comparison(data,n0;mpre = mpre , mpost = mpost)
+        prepost_comparison(data,n0;mpre = mpre , mpost = mpost, foutname=foutname)
     end
 
     return stats_band_pre, stats_band_post, pvals_α , pvals_γ
