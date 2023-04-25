@@ -1,8 +1,8 @@
 module NeuropixelAnalysis
 
-using DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTests,FFTW,MAT
+using DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTests,FFTW,MAT,Distributions
 
-export DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTest,FFTW,MAT
+export DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTest,FFTW,MAT,Distributions
 export read_channel,channel_idx,heatmapMT,timefreq,movfilter,
 process_data,relative_power,depth,prepost_analysis
 export logspectral_dist,export_matfile
@@ -253,10 +253,19 @@ end
 """
     movfilter(t, tfhm, fl)
 Authomatic removal of segments including movement data.
+If Q is is assigned, then it also removes segments with Q
+larger than a certain threshold.
 This function assumes segments of Δt=10
 """
-function movfilter(t, tfhm, fl;Δt=10.0)
+function movfilter(t, tfhm, fl;Δt=10.0,q = zeros(1))
+
     mov_pre = readdlm("../1_data/mov_" * fl * ".dat", ' ')
+    if q!=zeros(1)
+        d=Normal(mean(q),std(q))
+        ctop = quantile(d,0.975)
+        tq = findall(==(1),q.>ctop)
+        mov_pre = cat(mov_pre,(tq.-0.5)*Δt,dims=1)
+    end
     mov_indx = floor.(mov_pre ./ Δt) * Δt .+ 0.5*Δt
     indx = t .∈ [mov_indx]
     indx = findall(==(0), indx)
@@ -275,8 +284,8 @@ function process_data(n0,nf;mpre=9000000,mpost=9000000)
     cut_cortex("post",n0,nf, mpost)
     compute_bipolar("cortex_pre","bipolar_pre",n,mpre)   
     compute_bipolar("cortex_post","bipolar_post",n,mpost) 
-    compute_csd("cortex_pre","csd_pre",n,mpre)           
-    compute_csd("cortex_post","csd_post",n,mpost)         
+    # compute_csd("cortex_pre","csd_pre",n,mpre)           
+    # compute_csd("cortex_post","csd_post",n,mpost)         
 end
 
 
@@ -379,7 +388,6 @@ function prepost_comparison(data,n0; mpre=9000000, mpost=9000000, foutname = "te
         pvals_α[id+1,2] = pvalue(ApproximatePermutationTest(α_pre./total_pre, α_post./total_post, mean, 1000))
         pvals_γ[id+1,2] = pvalue(ApproximatePermutationTest(γ_pre./total_pre, γ_post./total_post, mean, 1000))
 
-
         # T-test. 
         for j in 1:l
             # pvals_uneq_tfhm[id+1, j] = pvalue(UnequalVarianceTTest(tfhm_pre[j, :], tfhm_post[j, :]))
@@ -435,36 +443,18 @@ function tfhm_analysis(id, fl, flmov ; m,Δt=10.0)
 
     T  = floor(length(y)/rate);
     ns = Int(floor(T / Δt));
-    y = y[1:Int(floor(m/ns)*ns)]    
+    y = y[1:Int(floor(m/ns)*ns)]    # length `m` might not coincide with multiple of Δt*dt
 
-    # clean up the segments containing movement directly in the time series
-    # #if !isempty(flmov)
-    # dts = T/ns;
-    ts = 0.5*Δt:Δt:ns*Δt
-    tr,yr = movfilter(ts,reshape(y,:,ns),flmov;Δt);
-    y=reshape(yr,:,1)[:,1];
-    # #end
-
-    # create surrogate
-    S = rfft(y); 
-    S0 = @. abs.(S)*exp(im*rand()*2*π);
-    y0 = irfft(S0,2*length(S0)-2);
-
-    # analyze real data
     t, f, tfhm = timefreq(y);
     smean = mean(tfhm,dims=2)[:,1];
-    sstd  = std(tfhm,dims=2)[:,1];
-
-    # analyze surrogate
-    ts,f,tfhm0 = timefreq(y0);
-    smean0 = mean(tfhm0,dims=2)[:,1];
-
-    ns = length(ts)
-        
     q = [logspectral_dist(tfhm[:,i],smean,f) for i in 1:ns]
-    q0 = [logspectral_dist(tfhm0[:,i],smean0,f) for i in 1:ns]
+    tr, f_tfhm = movfilter(t,tfhm,flmov; Δt, q=q)
 
-    return f,tfhm,q,q0
+    fsmean = mean(f_tfhm,dims=2)[:,1];
+    ns = length(tr)
+    q0 = [logspectral_dist(f_tfhm[:,i],fsmean,f) for i in 1:ns]
+
+    return f,f_tfhm,q,q0,tr
 end
 
 
