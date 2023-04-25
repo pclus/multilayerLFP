@@ -337,13 +337,15 @@ function prepost_comparison(data,n0; mpre=9000000, mpost=9000000, foutname = "te
     pvals_γ = zeros(n0,2)
 
 
-    ns_pre = NeuropixelAnalysis.numberofsegments("pre";m=mpre)
-    ns_post = NeuropixelAnalysis.numberofsegments("post";m=mpost)
+    # ns_pre = NeuropixelAnalysis.numberofsegments("pre";m=mpre)
+    # ns_post = NeuropixelAnalysis.numberofsegments("post";m=mpost)
+    ns_pre = Int(floor(mpre/25000));
+    ns_post = Int(floor(mpost/25000));
     Q_pre = zeros(n0,ns_pre)
     Q0_pre = zeros(n0,ns_pre)
     Q_post = zeros(n0,ns_post)
     Q0_post = zeros(n0,ns_post)
-    pvals_Q = zeros(n0,2)
+    # pvals_Q = zeros(n0,2)
 
     state = Threads.Atomic{Int}(0);
 
@@ -355,22 +357,22 @@ function prepost_comparison(data,n0; mpre=9000000, mpost=9000000, foutname = "te
 
 
         # Pre
-        f,tfhm_pre,Q_pre[id+1,:],Q0_pre[id+1,:] = tfhm_analysis(id, data*"pre", "pre" ; m=mpre)
+        f,tfhm_pre,Q_pre[id+1,:],Q0,tr = tfhm_analysis(id, data*"pre", "pre" ; m=mpre); Q0_pre[id+1,tr]=Q0;
         # t, f, tfhm = timefreq(id, data*"pre"; m = mpre)
         # idx, tfhm_pre = movfilter(t, tfhm, "pre")
         psd_mean_tfhm_pre[id+1, :] = mean(tfhm_pre, dims=2)
         psd_std_tfhm_pre[id+1, :] = std(tfhm_pre, dims=2)
 
         # Post
-        f,tfhm_post,Q_post[id+1,:],Q0_post[id+1,:] = tfhm_analysis(id, data*"post", "post" ; m=mpost)
+        f,tfhm_post,Q_post[id+1,:],Q0,tr = tfhm_analysis(id, data*"post", "post" ; m=mpost); Q0_post[id+1,tr]=Q0;
         # t, f, tfhm = timefreq(id, data*"post"; m = mpost)
         # idx, tfhm_post = movfilter(t, tfhm, "post")
         psd_mean_tfhm_post[id+1, :] = mean(tfhm_post, dims=2)
         psd_std_tfhm_post[id+1, :] = std(tfhm_post, dims=2)
 
-        # Compare Q and Q0
-        pvals_Q[id+1,1] = pvalue(ApproximateTwoSampleKSTest(Q_pre[id+1,:], Q0_pre[id+1,:]))
-        pvals_Q[id+1,2] = pvalue(ApproximateTwoSampleKSTest(Q_post[id+1,:], Q0_post[id+1,:]))
+        # Compare Q and Q0 # DEPRECATED, we are not using surrogate analysis right now
+        # pvals_Q[id+1,1] = pvalue(ApproximateTwoSampleKSTest(Q_pre[id+1,:], Q0_pre[id+1,:]))
+        # pvals_Q[id+1,2] = pvalue(ApproximateTwoSampleKSTest(Q_post[id+1,:], Q0_post[id+1,:]))
 
         # band analysis 
         α_pre, γ_pre, total_pre = relative_power_from_segments(f,tfhm_pre)
@@ -414,7 +416,7 @@ function prepost_comparison(data,n0; mpre=9000000, mpost=9000000, foutname = "te
     writedlm(namebase*"Q_post.dat",Q_post," ")
     writedlm(namebase*"Q0_post.dat",Q0_post," ")
 
-    writedlm(namebase*"Q_pvals.dat",pvals_Q," ")
+    # writedlm(namebase*"Q_pvals.dat",pvals_Q," ")
 
     return stats_band_pre, stats_band_post, pvals_α, pvals_γ, Q_pre, Q0_pre, Q_post, Q0_post
 
@@ -436,7 +438,7 @@ function numberofsegments(fl;m=9000000,Δt=10.0)
 end
 
 
-function tfhm_analysis(id, fl, flmov ; m,Δt=10.0)
+function tfhm_analysis(id, fl, flmov ; m=9000000, Δt=10.0)
     rate = 2500;
     dt = 0.0004
     t, y = read_channel(id, fl; t0=dt, tf=m*dt, m=m)
