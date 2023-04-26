@@ -1,0 +1,18 @@
+set multiplot layout 1,5
+do for[id=8:11]{
+	dir  ="suj".id."/"
+	plot dir.'bipolar_band_stats_pre.dat' ev 1 u 3:0 w l t '', '' ev 1 u 4:0 w l t '', dir.'bipolar_band_stats_post.dat' ev 1 u 3:0 w l lc 1 dt (3,3) lw 2 t '', '' ev 1 u 4:0 w l lc 2 dt (3,3) lw 2 t "suj".id
+}
+unset multi
+
+set pale @BLUERED
+set xrange[0:100]
+set yrange[0:136]
+set multiplot layout 2,3
+do for[id=8:11]{
+	dir  ="suj".id."/"
+	set cbrange[-1e-15:1e-15]
+	plot dir.'bipolar_tfhm_diff.dat' mat u ($1*0.1):2:3 w ima
+}
+unset multi
+

@@ -8,7 +8,8 @@ using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 n0=226;
 nf=361;
 
-for sub_id in [8,9,10,11,12,13,15,16,18,19,20]
+# for sub_id in [8,9,10,11,12,13,15,16,18,19,20]
+for sub_id in [15,16,18,19,20]
 	subject = "suj"*string(sub_id)
 	
 	if !isdir("../4_outputs/pipeline/"*subject)
@@ -18,5 +19,6 @@ for sub_id in [8,9,10,11,12,13,15,16,18,19,20]
 	process_data(n0,nf;mpre,mpost);
 	prepost_analysis(n0,nf;mpre=mpre,mpost=mpost,foutname=subject*"/");
 	
+	GC.gc()
 end
 

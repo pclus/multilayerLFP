@@ -311,12 +311,15 @@ function prepost_analysis(n0,nf;mpre=9000000,mpost=9000000,foutname = "temp_") #
     # for (i,data) in enumerate(("bipolar_","kcsd_","cortex_","csd_"))
     for (i,data) in enumerate(("bipolar_",))
         n0=ns[i];
-        stats_band_pre[data], stats_band_post[data], pvals_α[data], pvals_γ[data], 
-        Qpre[data], Q0pre[data], Qpost[data], Q0post[data] =
-        prepost_comparison(data,n0;mpre = mpre , mpost = mpost, foutname=foutname)
+        # stats_band_pre[data], stats_band_post[data], pvals_α[data], pvals_γ[data], 
+        # Qpre[data], Q0pre[data], Qpost[data], Q0post[data] =
+        prepost_comparison(data,n0;mpre = mpre , mpost = mpost, foutname=foutname);
     end
 
-    return stats_band_pre, stats_band_post, pvals_α , pvals_γ
+    # return stats_band_pre, stats_band_post, pvals_α , pvals_γ
+    print("\nAll done!\n")
+
+    return 
 end
 
 
@@ -417,9 +420,9 @@ function prepost_comparison(data,n0; mpre=9000000, mpost=9000000, foutname = "te
     writedlm(namebase*"Q0_post.dat",Q0_post," ")
 
     # writedlm(namebase*"Q_pvals.dat",pvals_Q," ")
-
-    return stats_band_pre, stats_band_post, pvals_α, pvals_γ, Q_pre, Q0_pre, Q_post, Q0_post
-
+    print("\nDone!\n")
+    # return stats_band_pre, stats_band_post, pvals_α, pvals_γ, Q_pre, Q0_pre, Q_post, Q0_post
+    return 
 end
 
 function numberofsegments(fl;m=9000000,Δt=10.0)
