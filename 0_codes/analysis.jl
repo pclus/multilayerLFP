@@ -5,76 +5,86 @@ push!(LOAD_PATH, pwd())
 using NeuropixelAnalysis,SpectralAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 using StatsBase
+using ColorSchemes
 
-Δt=1
-t, f, tfhm = timefreq(id, fl, Δt);
-idx, tfhm = movfilter(t, tfhm, "pre")
+tfhm_mean_pre=Dict()
+tfhm_mean_post=Dict()
+tfhm_std_pre=Dict()
+tfhm_std_post=Dict()
+tfhm_diff=Dict()
+tfhm_pvals=Dict()
 
-freqs=f;
+band_stats_pre=Dict()
+band_stats_post=Dict()
+band_pvals_alpha=Dict()
+band_pvals_gamma=Dict()
 
-n0=226;
-nf=361;
+Q_pre=Dict()
+Q0_pre=Dict()
+Q_post=Dict()
+Q0_post=Dict()
 
-# write -------------------------------------------------------
-spre,spost,pα,pγ = prepost_analysis(n0,nf)
+for subj in [8,9,10,11]
+    data = "bipolar_"
+    foutname = "suj"*string(subj)*"/"
+    namebase = "../4_outputs/pipeline/"*foutname*data
 
-for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
-    writedlm("../4_outputs/"*data*"spre.dat", spre[data], ' ');
-    writedlm("../4_outputs/"*data*"spost.dat", spost[data], ' ');
-    writedlm("../4_outputs/"*data*"palpha.dat", pα[data], ' ');
-    writedlm("../4_outputs/"*data*"pgamma.dat", pγ[data], ' ');
+    tfhm_mean_pre[subj]=readdlm(namebase*"tfhm_mean_pre.dat")
+    tfhm_mean_post[subj]=readdlm(namebase*"tfhm_mean_post.dat")
+    tfhm_std_pre[subj]=readdlm(namebase*"tfhm_std_pre.dat")
+    tfhm_std_post[subj]=readdlm(namebase*"tfhm_std_post.dat")
+    tfhm_diff[subj]=readdlm(namebase*"tfhm_diff.dat")
+    tfhm_pvals[subj]=readdlm(namebase*"tfhm_pvals.dat")
+
+    band_stats_pre[subj]=readdlm(namebase*"band_stats_pre.dat")
+    band_stats_post[subj]=readdlm(namebase*"band_stats_post.dat")
+    band_pvals_alpha[subj]=readdlm(namebase*"band_pvals_alpha.dat")
+    band_pvals_gamma[subj]=readdlm(namebase*"band_pvals_gamma.dat")
+
+    Q_pre[subj]=readdlm(namebase*"Q_pre.dat")
+    Q0_pre[subj]=readdlm(namebase*"Q0_pre.dat")
+    Q_post[subj]=readdlm(namebase*"Q_post.dat")
+    Q0_post[subj]=readdlm(namebase*"Q0_post.dat")
 end
-#--------------------------------------------------------------
 
-# read --------------------------------------------------------
-spre = Dict();
-spost = Dict();
-pα = Dict();
-pγ = Dict();
-
-for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
-    spre[data] =readdlm("../4_outputs/"*data*"spre.dat");
-    spost[data] = readdlm("../4_outputs/"*data*"spost.dat");
-    pα[data] = readdlm("../4_outputs/"*data*"palpha.dat");
-    pγ[data] = readdlm("../4_outputs/"*data*"pgamma.dat");
-end
-#--------------------------------------------------------------
-
-
-
-dp = Dict()
-for (i,data) in enumerate(("kcsd_","cortex_","csd_","bipolar_","filtered_"))
-    dp[data] = depth(data[1:end-1],size(spre[data])[1])
+# Figures
+function fillhoriz(data,dp)
+    dp = cat(dp,[dp[end], dp[1], dp[1]],dims=1)
+    ndat = cat(data,[-1, -1, data[1]],dims=1)
+    return ndat,dp
 end
 
+subj=8
+dp = depth("bipolar",132)
 
-# plot(spre[data][:,3],dp[data],xerr=spre[data][:,7],msc=:auto)
-# p1 = plot!(spre[data][:,4],dp[data],xerr=spre[data][:,7],
-# xlim=(0,1),msc=:auto,msw=0.1,
-# xlabel = "Rel. power (pre)", ylabel = "depth [μm]")
+default(xlabel="Rel. power",ylabel="depth [μm]")
 
-data="bipolar_"
+# Relative power filled with color
+plot(fillhoriz(band_stats_pre[subj][:,3] + band_stats_pre[subj][:,4],dp), label = "α",
+lc=1, fc=1,fill=true,fillalpha=0.25)
+plot!(fillhoriz(band_stats_pre[subj][:,4],dp),label = "γ",lc=2,fc=2,
+    fill=true,fillalpha=0.25,xlim=(0,1.0),ylim=(dp[1],dp[end]),framestyle=:box)
+plot!(band_stats_post[subj][:,4],dp, label="",lc=2,ls=:dash)
+plot!(band_stats_pre[subj][:,3]+band_stats_post[subj][:,4],dp, label="",lc=1,ls=:dash)
 
-plot(spre[data][:,3],dp[data])
-p1 = plot!(spre[data][:,4],dp[data],
-xlim=(0,1),msc=:auto,
-xlabel = "Rel. power (pre)", ylabel = "depth [μm]")
+# Plain relative power
+plot(band_stats_pre[subj][:,3],dp, label = "α", lc=1, fc=1, lw =2,
+    xlim=(0,1.0),ylim=(dp[1],dp[end]),framestyle=:box)
+plot!(band_stats_pre[subj][:,4],dp,label = "γ",lc=2,fc=2,lw =2)
+plot!(band_stats_post[subj][:,3],dp, label="",lc=1,ls=:dash)
+plot!(band_stats_post[subj][:,4],dp, label="",lc=2,ls=:dash)
 
-plot(spost[data][:,3],dp[data],msc=:auto)
-p2 = plot!(spost[data][:,4],dp[data],
-xlim=(0,1),msc=:auto,
-xlabel = "Rel. power (post)", ylabel = "depth [μm]")
 
-plot(-spre[data][:,3]+spost[data][:,3],dp[data])
-p3 = plot!(-spre[data][:,4]+spost[data][:,4],dp[data],xlim=(-0.2,0.2),
-xlabel = "Difference (post-pre)", ylabel = "depth [μm]")
+# Straight power
+subj=10
+plot(band_stats_pre[subj][:,1],dp, label = "α", lc=1, fc=1, lw =2,#xlim=(0,5e-13),
+    ylim=(dp[1],dp[end]),framestyle=:box,xaxis=:log)
+plot!(band_stats_pre[subj][:,2],dp,label = "γ",lc=2,fc=2,lw =2)
+plot!(band_stats_post[subj][:,1],dp, label="",lc=1,ls=:dash)
+plot!(band_stats_post[subj][:,2],dp, label="",lc=2,ls=:dash)
 
-plot(p1,p2,p3,layout=(1,3),labels=["α" "γ"],size=(800,450),lw=3)
-savefig("/home/pclusella/Desktop/"*data[1:end-1]*".png")
+# Heatmaps
+default(xlabel="Freq. [Hz]")
+subj=8
+heatmap(0.1:0.1:200,dp,log10.(tfhm_mean_pre[subj]),color=:rainbow1,xrange=(0,100),frame=:box)
 
-# data to Martina:
-k1 = [ dp["bipolar_"][1:2:end] spre["bipolar_"][1:2:end,3] spre["bipolar_"][1:2:end,4]]
-writedlm("bipolar_relpow.dat",k1,' ')
-
-k2 = [ dp["kcsd_"][:] spre["kcsd_"][:,3] spre["kcsd_"][:,4]]
-writedlm("kcsd_relpow.dat",k2,' ')
