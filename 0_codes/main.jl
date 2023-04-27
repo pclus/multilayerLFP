@@ -9,16 +9,16 @@ n0=226;
 nf=361;
 
 # for sub_id in [8,9,10,11,12,13,15,16,18,19,20]
-for sub_id in [15,16,18,19,20]
-	subject = "suj"*string(sub_id)
+#for sub_id in [15,16,18,19,20]
+sub_id=ARGS[1]
+subject = "suj"*string(sub_id)
 	
-	if !isdir("../4_outputs/pipeline/"*subject)
-	    mkdir("../4_outputs/pipeline/"*subject)
-	end
-	mpre,mpost = export_matfile("/media/pclusella/Pandora/UPO_data/"*subject*".mat",subject)
-	process_data(n0,nf;mpre,mpost);
-	prepost_analysis(n0,nf;mpre=mpre,mpost=mpost,foutname=subject*"/");
-	
-	GC.gc()
+if !isdir("../4_outputs/pipeline/"*subject)
+    mkdir("../4_outputs/pipeline/"*subject)
 end
+mpre,mpost = export_matfile("/media/pclusella/Pandora/UPO_data/"*subject*".mat",subject)
+process_data(n0,nf;mpre,mpost);
+prepost_analysis(n0,nf;mpre=mpre,mpost=mpost,foutname=subject*"/");
+	
+#end
 
