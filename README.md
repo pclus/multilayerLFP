@@ -235,16 +235,14 @@ plot 'psd_mean_tfhm.dat' matrix u (df*$2):1:3 w ima
 
 ## Next steps:
 
--. Repeat analysis only in cortex!
+
 0. Code cleaning:
-	- [ ] Further fix the pass of the arguments in the kcsd code (src_x and src_y). 
-	- [ ] For cortex electrodes in csd and bipolar, maybe we should return (and store in the binary) the number
-of recorded electrodes. This will depend on how much it varies from subject to subject.
-1. Look for differences in **time-frequency** accross channels *(under development)*
-2. [x] CSD using k-density method. 
-	- [ ] Write a report about kCSD and its validation:
-		- Error plots with results from cross validation
-		- Comparison with Laplacian (correlations)
-		- Broken electrodes
-3. Band-pass filter or freq. bands comparison 
-	- [ ] Check phase-amplitude relation between $\alpha$ and $\gamma$
+	-[ ] Clear the pipelene
+1. Documentation: create three separate documentation blocks, with their repos
+	-[ ] Pipeline (main repo)
+	-[ ] kCSD
+	-[ ] Surrogate analysis
+2. Further research:
+	-[ ] Correlations accross channels
+	-[ ] Artifacts in time series (aside from movement). In particular `suj9`
+	-[ ] Anesthesized animal
