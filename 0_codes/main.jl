@@ -18,4 +18,3 @@ end
 mpre,mpost = export_matfile("/media/pclusella/Pandora/UPO_data/"*subject*".mat",subject)
 process_data(n0,nf;mpre,mpost);
 prepost_analysis(n0,nf;mpre=mpre,mpost=mpost,foutname=subject*"/");
-
