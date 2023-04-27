@@ -46,6 +46,18 @@ for subj in [8,9,10,11,12,13,15,16,18,20]
     Q_post[subj]=readdlm(namebase*"Q_post.dat")
     Q0_post[subj]=readdlm(namebase*"Q0_post.dat")
 end
+dp = depth("bipolar",132)
+
+# total power, missing from the analysis...
+total_pre=Dict()
+for (i,tfhm) in tfhm_mean_pre
+    total_pre[i] = sum(tfhm,dims=2)*0.1
+end
+total_post=Dict()
+for (i,tfhm) in tfhm_mean_post
+    total_post[i] = sum(tfhm,dims=2)*0.1
+end
+
 
 # Figures
 function fillhoriz(data,dp)
@@ -54,102 +66,151 @@ function fillhoriz(data,dp)
     return ndat,dp
 end
 
+
 subj=9
-dp = depth("bipolar",132)
 
+# # Relative power filled with color
+# plot(xlabel="Rel. power",ylabel="depth [μm]")
+# plot!(fillhoriz(band_stats_pre[subj][:,3] + band_stats_pre[subj][:,4],dp), label = "α",
+# lc=1, fc=1,fill=true,fillalpha=0.25)
+# plot!(fillhoriz(band_stats_pre[subj][:,4],dp),label = "γ",lc=2,fc=2,
+#     fill=true,fillalpha=0.25,xlim=(0,1.0),ylim=(dp[1],dp[end]),framestyle=:box)
+# plot!(band_stats_post[subj][:,4],dp, label="",lc=2,ls=:dash)
+# plot!(band_stats_pre[subj][:,3]+band_stats_post[subj][:,4],dp, label="",lc=1,ls=:dash)
 
-
-# Relative power filled with color
-plot(xlabel="Rel. power",ylabel="depth [μm]")
-plot!(fillhoriz(band_stats_pre[subj][:,3] + band_stats_pre[subj][:,4],dp), label = "α",
-lc=1, fc=1,fill=true,fillalpha=0.25)
-plot!(fillhoriz(band_stats_pre[subj][:,4],dp),label = "γ",lc=2,fc=2,
-    fill=true,fillalpha=0.25,xlim=(0,1.0),ylim=(dp[1],dp[end]),framestyle=:box)
-plot!(band_stats_post[subj][:,4],dp, label="",lc=2,ls=:dash)
-plot!(band_stats_pre[subj][:,3]+band_stats_post[subj][:,4],dp, label="",lc=1,ls=:dash)
 
 # Plain relative power
-plot(xlabel="Rel. power",ylabel="depth [μm]")
-plot!(band_stats_pre[subj][:,3],dp, label = "α", lc=1, fc=1, lw =2,
-    xlim=(0,1.0),ylim=(dp[1],dp[end]),framestyle=:box)
-plot!(band_stats_pre[subj][:,4],dp,label = "γ",lc=2,fc=2,lw =2)
-plot!(band_stats_post[subj][:,3],dp, label="",lc=1,ls=:dash)
-plot!(band_stats_post[subj][:,4],dp, label="",lc=2,ls=:dash)
+pls = Any[]
+pythonplot()
+for subj in [8,9,10,11,12,13,15,16,18,20]
+    plot(xlabel="Rel. power",ylabel="depth [μm]",title="suj"*string(subj))
+    plot!(band_stats_pre[subj][:,3],dp, label = "αₚᵣₑ", lc=1, fc=1, lw =2,
+        xlim=(0,1.0),ylim=(dp[1],dp[end]),framestyle=:box)
+    plot!(band_stats_pre[subj][:,4],dp,label = "γₚᵣₑ",lc=2,fc=2,lw =2)
+    plot!(band_stats_post[subj][:,3],dp, label="αₚₒₛₜ",lc=1,ls=:dash)
+    p = plot!(band_stats_post[subj][:,4],dp, label="γₚₒₛₜ",lc=2,ls=:dash)
+    push!(pls,p)
+end
+plot(pls...,layout=(2,5),size=(600*3,400*2),legend=:bottomright,xformatter=:auto,
+bottommargin=10mm,topmargin=2mm)
+savefig("../3_figures/global/Fig_RelPower.pdf")
 
 
-# Straight power
-subj=9
-plot(xlabel="Rel. power",ylabel="depth [μm]")
-plot!(band_stats_pre[subj][:,1],dp, label = "α", lc=1, fc=1, lw =2,xlim=:default,
-    ylim=(dp[1],dp[end]),framestyle=:box)
-plot!(band_stats_pre[subj][:,2],dp,label = "γ",lc=2,fc=2,lw =2)
-plot!(band_stats_post[subj][:,1],dp, label="",lc=1,ls=:dash)
-plot!(band_stats_post[subj][:,2],dp, label="",lc=2,ls=:dash)
+
+# # Straight power
+# subj=10
+# plot(xlabel="bLFP power",ylabel="depth [μm]")
+# plot!(band_stats_pre[subj][:,1],dp, label = L"\alpha_\textrm{pre}", lc=1, fc=1, lw =2,xlim=:default,
+#     ylim=(dp[1],dp[end]),framestyle=:box)
+# plot!(band_stats_pre[subj][:,2],dp,label = L"\gamma_\textrm{pre}",lc=2,fc=2,lw =2)
+# plot!(band_stats_post[subj][:,1],dp, label=L"\alpha_\textrm{post}",lc=1,ls=:dash)
+# plot!(band_stats_post[subj][:,2],dp, label=L"\gamma_\textrm{post}",lc=2,ls=:dash)
 
 # Power comparison
-subj=9
-plot(xlabel=L"\alpha_\textrm{post}/\alpha_\textrm{pre},\;\gamma_\textrm{post}/\gamma_\textrm{pre}")
-plot!(band_stats_post[subj][:,1]./band_stats_pre[subj][:,1],dp, label = "α", lc=1, fc=1, lw =2,#xlim=(0,5e-13),
-    ylim=(dp[1],dp[end]),framestyle=:box)
-plot!(band_stats_post[subj][:,2]./band_stats_pre[subj][:,2],dp,label = "γ",lc=2,fc=2,lw =2)
+
+pls = Any[]
+# gr()
+pythonplot()
+for subj in [8,9,10,11,12,13,15,16,18,20]
+    plot(xlabel="post/pre",ylabel="Depth [μm]")
+    plot!(ones(size(dp)),dp,lc=:black,ls=:dash,label="",title="suj"*string(subj))
+    plot!(band_stats_post[subj][:,1]./band_stats_pre[subj][:,1],dp, lc=1, fc=1, lw =2,#xlim=(0,5e-13),
+        ylim=(dp[1],dp[end]),framestyle=:box,label="αₚₒₛₜ/αₚᵣₑ")
+    p = plot!(band_stats_post[subj][:,2]./band_stats_pre[subj][:,2],dp,lc=2,fc=2,lw =2,
+    label=L"γₚₒₛₜ/γₚᵣₑ")
+    push!(pls,p)
+end
+plot(pls...,layout=(2,5),size=(600*3,400*2),key=true,xformatter=:auto,
+bottommargin=10mm,topmargin=2mm,legend=:bottomright)
+savefig("../3_figures/global/Fig_PostPre.pdf")
 
 
+# Total power comparison-----------------
+# plotlyjs()
+# gr()
+pythonplot()
+pls = Any[]
+for subj in [8,9,10,11,12,13,15,16,18,20]
+    plot(xlabel="Total power",ylabel="Depth [μm]")
+    plot!(total_pre[subj][:],dp, lc=3, fc=1, lw =2,#xlim=(0,5e-13),
+        ylim=(dp[1],dp[end]),framestyle=:box,label="pre",title="suj"*string(subj))
+    p=plot!(total_post[subj][:],dp, lc=3, fc=1, lw =1,ls=:dash,
+        ylim=(dp[1],dp[end]),framestyle=:box,label="post")
+        push!(pls,p)
+end
 
+using Plots.Measures
+plot(pls...,layout=(2,5),size=(600*3,400*2),key=false,xformatter=:auto,
+bottommargin=15mm,topmargin=2mm)
+savefig("../3_figures/global/Fig_TotPower.pdf")
 
 # Straight power
-plot(xlabel=L"\alpha_\textrm{post}/\alpha_\textrm{pre}",xlim=:default)
-for subj in [8,10,11,12,13,15,16,18,20]
+# plot(xlabel=L"\alpha_\textrm{post}/\alpha_\textrm{pre}",xlim=:default)
+# for subj in [8,10,11,12,13,15,16,18,20]
 
-    plot!(band_stats_post[subj][:,1].-band_stats_pre[subj][:,1],dp, 
-    label = "α", lc=1, fc=1, lw =1, ylim=(dp[1],dp[end]),framestyle=:box,legend=:false)
+#     plot!(band_stats_post[subj][:,1].-band_stats_pre[subj][:,1],dp, 
+#     label = "α", lc=1, fc=1, lw =1, ylim=(dp[1],dp[end]),framestyle=:box,legend=:false)
    
+# end
+# pα = plot!()
+
+# plot(xlabel=L"\gamma_\textrm{post}/\gamma_\textrm{pre}",xlim=:default)
+# for subj in [8,10,11,12,13,15,16,18,20]
+#     plot!(band_stats_post[subj][:,2].-band_stats_pre[subj][:,2],dp,
+#      lc=2, fc=1, lw =1, ylim=(dp[1],dp[end]),framestyle=:box,legend=:false)
+# end
+# pγ = plot!()
+
+# plot(pα,pγ,layout=(1,2))
+
+
+
+using Gnuplot
+Gnuplot.options
+@gp "
+set term pngcairo enhanced size 3000,1000;
+set pale @RAINBOW;
+set xrange[0:100]; 
+set logs zcb;
+set yrange[-1545.92:-245.92];
+set cbrange[1e-6:0.5e-4];
+unset key;
+set border lw 1;
+set multiplot layout 2,5 title 'Normalized power PRE' ;
+set xlabel 'Freq [Hz]'
+set ylabel 'Depth [μm]'
+set colorbox
+set cbtics format '1e%T'" :-
+
+for subj in [8,9,10,11,12,13,15,16,18,20]
+    @gp :- "set title 'suj"*string(subj)*"'"
+    @gp :- subj tfhm_mean_pre[subj]./sum(tfhm_mean_pre[subj]) "origin=(0, -1545.92) dx=0.1 dy=10 w image"
 end
-pα = plot!()
+p1 = @gp :- ""
 
-plot(xlabel=L"\gamma_\textrm{post}/\gamma_\textrm{pre}",xlim=:default)
-for subj in [8,10,11,12,13,15,16,18,20]
-    plot!(band_stats_post[subj][:,2].-band_stats_pre[subj][:,2],dp,
-     lc=2, fc=1, lw =1, ylim=(dp[1],dp[end]),framestyle=:box,legend=:false)
+display(MIME("image/png"),p1)
+
+# POST
+Gnuplot.options
+@gp "
+set term pngcairo enhanced size 3000,1000;
+set pale @RAINBOW;
+set xrange[0:100]; 
+set logs zcb;
+set yrange[-1545.92:-245.92];
+set cbrange[1e-6:0.5e-4];
+unset key;
+set border lw 1;
+set multiplot layout 2,5 title 'Normalized power POST' ;
+set xlabel 'Freq [Hz]'
+set ylabel 'Depth [μm]'
+set colorbox
+set cbtics format '1e%T'" :-
+
+for subj in [8,9,10,11,12,13,15,16,18,20]
+    @gp :- subj "set title 'suj"*string(subj)*"'"
+    @gp :- subj tfhm_mean_post[subj]./sum(tfhm_mean_post[subj]) "origin=(0, -1545.92) dx=0.1 dy=10 w image"
 end
-pγ = plot!()
+p1 = @gp :- ""
 
-plot(pα,pγ,layout=(1,2))
-
-
-
-
-# Heatmaps
-using Plots.PlotMeasures
-Plots.gr_cbar_width[]=0.01
-Plots.gr_cbar_width[]=0.01
-Plots.gr_colorbar_tick_size[]=0.001
-Plots.gr_cbar_offsets[]=(0.005,0.02)
-hm= Any[]
-for subj in [8,10,11,12,13,15,16,18,20]
-    p = heatmap(0.1:0.1:200,dp,log10.(tfhm_mean_pre[subj]./sum(tfhm_mean_pre[subj])),
-    color=:rainbow1,xrange=(0.0,100.0),frame=:box,clim=(-6,-4.5), title="suj"*string(subj),
-    rightmargin=2mm,label="suj"*string(subj),colorbar=true)
-    # p = heatmap(0.1:0.1:200,dp,tfhm_mean_pre[subj],
-    # color=:rainbow1,xrange=(0.0,100.0),frame=:box,colorbar_scale=:log10,
-    # rightmargin=10mm)
-    plot!(ylabel="Depth [μm]",xlabel="Freq. [Hz]")
-    push!(hm,p)
-end
-
-plot(hm...,size=(1920,1080),bottommargin=10mm,leftmargin=10mm)
-
-
-
-subj=8
-p = heatmap(0.1:0.1:200,dp,tfhm_mean_pre[subj],
-    color=:rainbow1,xrange=(0.0,100.0),frame=:box,
-    rightmargin=10mm,colorbar_scale=:log10)
-plot!(ylabel="Depth [μm]",xlabel="Freq. [Hz]")
-
-a=rand(4,4)
-plot(-2:1,-3:0,a,lt=:heatmap,colorbar_scale=:log10,xlim=:default)
-plot(a,lt=:heatmap)
-plot(log10.(a),lt=:heatmap)
-heatmap(a,colorbar_scale=:log10)
-
-
+display(MIME("image/png"),p1)
