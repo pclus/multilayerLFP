@@ -24,7 +24,7 @@ Q0_pre=Dict()
 Q_post=Dict()
 Q0_post=Dict()
 
-for subj in [8,9,10,11]
+for subj in [8,9,10,11,12,13,15,16,18,19,20]
     data = "bipolar_"
     foutname = "suj"*string(subj)*"/"
     namebase = "../4_outputs/pipeline/"*foutname*data
@@ -68,6 +68,7 @@ plot!(band_stats_post[subj][:,4],dp, label="",lc=2,ls=:dash)
 plot!(band_stats_pre[subj][:,3]+band_stats_post[subj][:,4],dp, label="",lc=1,ls=:dash)
 
 # Plain relative power
+default(xlabel="Rel. power",ylabel="depth [μm]")
 plot(band_stats_pre[subj][:,3],dp, label = "α", lc=1, fc=1, lw =2,
     xlim=(0,1.0),ylim=(dp[1],dp[end]),framestyle=:box)
 plot!(band_stats_pre[subj][:,4],dp,label = "γ",lc=2,fc=2,lw =2)
@@ -77,14 +78,49 @@ plot!(band_stats_post[subj][:,4],dp, label="",lc=2,ls=:dash)
 
 # Straight power
 subj=10
-plot(band_stats_pre[subj][:,1],dp, label = "α", lc=1, fc=1, lw =2,#xlim=(0,5e-13),
-    ylim=(dp[1],dp[end]),framestyle=:box,xaxis=:log)
+default(xlabel="Rel. power",ylabel="depth [μm]")
+plot(band_stats_pre[subj][:,1],dp, label = "α", lc=1, fc=1, lw =2,xlim=:default,
+    ylim=(dp[1],dp[end]),framestyle=:box)
 plot!(band_stats_pre[subj][:,2],dp,label = "γ",lc=2,fc=2,lw =2)
 plot!(band_stats_post[subj][:,1],dp, label="",lc=1,ls=:dash)
 plot!(band_stats_post[subj][:,2],dp, label="",lc=2,ls=:dash)
+
+# Power comparison
+subj=10
+default(xlabel=L"\alpha_\textrm{post}/\alpha_\textrm{pre},\;\gamma_\textrm{post}/\gamma_\textrm{pre}")
+plot(band_stats_post[subj][:,1]./band_stats_pre[subj][:,1],dp, label = "α", lc=1, fc=1, lw =2,#xlim=(0,5e-13),
+    ylim=(dp[1],dp[end]),framestyle=:box)
+plot!(band_stats_post[subj][:,2]./band_stats_pre[subj][:,2],dp,label = "γ",lc=2,fc=2,lw =2)
+
+
 
 # Heatmaps
 default(xlabel="Freq. [Hz]")
 subj=8
 heatmap(0.1:0.1:200,dp,log10.(tfhm_mean_pre[subj]),color=:rainbow1,xrange=(0,100),frame=:box)
+
+
+# Straight power
+default(xlabel=L"\alpha_\textrm{post}/\alpha_\textrm{pre},\;\gamma_\textrm{post}/\gamma_\textrm{pre}")
+plot()
+for subj in [8,10,11,12,13,15,16,18]
+
+    plot!(band_stats_post[subj][:,1]./band_stats_pre[subj][:,1],dp, 
+    label = "α", lc=1, fc=1, lw =1, ylim=(dp[1],dp[end]),framestyle=:box,legend=:false)
+    # plot!(band_stats_post[subj][:,2]./band_stats_pre[subj][:,2],dp,label = "γ",lc=2,fc=2,lw =2)
+
+end
+pα = plot!()
+
+default(xlabel=L"\gamma_\textrm{post}/\gamma_\textrm{pre}",xlim=(0,5.0))
+plot()
+for subj in [8,10,11,12,13,15,16,18]
+    plot!(band_stats_post[subj][:,2]./band_stats_pre[subj][:,2],dp,
+     lc=2, fc=1, lw =1, ylim=(dp[1],dp[end]),framestyle=:box,legend=:false)
+end
+pγ = plot!()
+
+plot(pα,pγ,layout=(1,2))
+
+
 
