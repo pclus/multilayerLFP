@@ -334,11 +334,10 @@ function prepost_comparison(data,n0; mpre=9000000, mpost=9000000, foutname = "te
     # pvals_uneq_tfhm = zeros(n0, l);
     pvals_perm_tfhm = zeros(n0, l);
 
-    stats_band_pre = zeros(n0,8)
-    stats_band_post = zeros(n0,8)
+    stats_band_pre = zeros(n0,10)
+    stats_band_post = zeros(n0,10)
     pvals_α = zeros(n0,2)
     pvals_γ = zeros(n0,2)
-
 
     # ns_pre = NeuropixelAnalysis.numberofsegments("pre";m=mpre)
     # ns_post = NeuropixelAnalysis.numberofsegments("post";m=mpost)
@@ -379,14 +378,14 @@ function prepost_comparison(data,n0; mpre=9000000, mpost=9000000, foutname = "te
 
         # band analysis 
         α_pre, γ_pre, total_pre = relative_power_from_segments(f,tfhm_pre)
-        stats_band_pre[id+1,1:8] .=
-                mean(α_pre),mean(γ_pre),mean(α_pre./total_pre),mean(γ_pre./total_pre),
-                std(α_pre), std(γ_pre), std(α_pre./total_pre), std(γ_pre./total_pre)
+        stats_band_pre[id+1,1:10] .=
+                mean(α_pre),mean(γ_pre),mean(α_pre./total_pre),mean(γ_pre./total_pre), mean(total_pre),
+                std(α_pre), std(γ_pre), std(α_pre./total_pre), std(γ_pre./total_pre), std(total_pre)
 
         α_post, γ_post, total_post = relative_power_from_segments(f,tfhm_post)
-        stats_band_post[id+1,1:8] .=
-                mean(α_post),mean(γ_post),mean(α_post./total_post),mean(γ_post./total_post),
-                std(α_post), std(γ_post), std(α_post./total_post), std(γ_post./total_post)
+        stats_band_post[id+1,1:10] .=
+                mean(α_post),mean(γ_post),mean(α_post./total_post),mean(γ_post./total_post), mean(total_post),
+                std(α_post), std(γ_post), std(α_post./total_post), std(γ_post./total_post), std(total_post)
 
         pvals_α[id+1,1] = pvalue(ApproximatePermutationTest(α_pre, α_post, mean, 1000))
         pvals_γ[id+1,1] = pvalue(ApproximatePermutationTest(γ_pre, γ_post, mean, 1000))
