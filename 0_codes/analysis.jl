@@ -5,7 +5,7 @@ push!(LOAD_PATH, pwd())
 using NeuropixelAnalysis,SpectralAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
 using StatsBase
-using ColorSchemes,LaTeXStrings
+using ColorSchemes,LaTeXStrings,Measures
 
 tfhm_mean_pre=Dict()
 tfhm_mean_post=Dict()
@@ -93,7 +93,34 @@ for subj in [8,9,10,11,12,13,15,16,18,20]
 end
 plot(pls...,layout=(2,5),size=(600*3,400*2),legend=:bottomright,xformatter=:auto,
 bottommargin=10mm,topmargin=2mm)
-savefig("../3_figures/global/Fig_RelPower.pdf")
+# savefig("../3_figures/global/Fig_RelPower.pdf")
+
+
+
+pythonplot()
+plot(xlabel="Rel. power",ylabel="depth [μm]")
+for subj in [8,9,10,11,12,13,15,16,18,20]
+    plot!(band_stats_pre[subj][:,3],dp, label = "αₚᵣₑ suj"*string(subj), lc=1, fc=1, lw =1,
+        xlim=(0,1.0),ylim=(dp[1],dp[end]),framestyle=:box)
+end
+plot!(lw=1)
+
+pythonplot()
+plot(xlabel="Rel. power",ylabel="depth [μm]")
+for subj in [8,9,10,11,12,13,15,16,18,20]
+    plot!(band_stats_pre[subj][:,4],dp, label = "γₚᵣₑ suj"*string(subj), lc=2, fc=1, lw =1,
+        xlim=(0,1.0),ylim=(dp[1],dp[end]),framestyle=:box)
+end
+plot!(lw=1)
+
+plot!(xlim=(0.05,0.15))
+
+# plot(pls...,layout=(2,5),size=(600*3,400*2),legend=:bottomright,xformatter=:auto,
+bottommargin=10mm,topmargin=2mm)
+# savefig("../3_figures/global/Fig_RelPower.pdf")
+
+
+
 
 
 
@@ -183,7 +210,7 @@ set colorbox
 set cbtics format '1e%T'" :-
 
 for subj in [8,9,10,11,12,13,15,16,18,20]
-    @gp :- "set title 'suj"*string(subj)*"'"
+    @gp :- subj "set title 'suj"*string(subj)*"'"
     @gp :- subj tfhm_mean_pre[subj]./sum(tfhm_mean_pre[subj]) "origin=(0, -1545.92) dx=0.1 dy=10 w image"
 end
 p1 = @gp :- ""
@@ -210,6 +237,76 @@ set cbtics format '1e%T'" :-
 for subj in [8,9,10,11,12,13,15,16,18,20]
     @gp :- subj "set title 'suj"*string(subj)*"'"
     @gp :- subj tfhm_mean_post[subj]./sum(tfhm_mean_post[subj]) "origin=(0, -1545.92) dx=0.1 dy=10 w image"
+end
+p1 = @gp :- ""
+
+display(MIME("image/png"),p1)
+
+
+#---------------------------------------------------------------
+# LOAD FULL
+
+tfhm_mean_pre=Dict()
+tfhm_mean_post=Dict()
+tfhm_std_pre=Dict()
+tfhm_std_post=Dict()
+tfhm_diff=Dict()
+tfhm_pvals=Dict()
+
+band_stats_pre=Dict()
+band_stats_post=Dict()
+band_pvals_alpha=Dict()
+band_pvals_gamma=Dict()
+
+Q_pre=Dict()
+Q0_pre=Dict()
+Q_post=Dict()
+Q0_post=Dict()
+
+for subj in [8,10,11,12,13,15]
+    data = "bipolar_"
+    foutname = "suj"*string(subj)*"/"
+    namebase = "../4_outputs/pipeline/full/"*foutname*data
+
+    tfhm_mean_pre[subj]=readdlm(namebase*"tfhm_mean_pre.dat")
+    tfhm_mean_post[subj]=readdlm(namebase*"tfhm_mean_post.dat")
+    tfhm_std_pre[subj]=readdlm(namebase*"tfhm_std_pre.dat")
+    tfhm_std_post[subj]=readdlm(namebase*"tfhm_std_post.dat")
+    tfhm_diff[subj]=readdlm(namebase*"tfhm_diff.dat")
+    tfhm_pvals[subj]=readdlm(namebase*"tfhm_pvals.dat")
+
+    band_stats_pre[subj]=readdlm(namebase*"band_stats_pre.dat")
+    band_stats_post[subj]=readdlm(namebase*"band_stats_post.dat")
+    band_pvals_alpha[subj]=readdlm(namebase*"band_pvals_alpha.dat")
+    band_pvals_gamma[subj]=readdlm(namebase*"band_pvals_gamma.dat")
+
+    Q_pre[subj]=readdlm(namebase*"Q_pre.dat")
+    Q0_pre[subj]=readdlm(namebase*"Q0_pre.dat")
+    Q_post[subj]=readdlm(namebase*"Q_post.dat")
+    Q0_post[subj]=readdlm(namebase*"Q0_post.dat")
+end
+dp = depth("bipolar",380).-2239.08
+
+using Gnuplot
+Gnuplot.options
+@gp "
+set term pngcairo enhanced size 3000,1000;
+set pale @RAINBOW;
+set xrange[0:100]; 
+set logs zcb;
+set yrange[-3840:0.0];
+set cbrange[0.5e-6:0.1e-4];
+unset key;
+set border lw 1;
+set multiplot layout 2,5 title 'Normalized power POST' ;
+set xlabel 'Freq [Hz]'
+set ylabel 'Depth [μm]'
+set colorbox
+set cbtics format '1e%T'" :-
+
+for subj in [8,10,11,12,13,15]
+    @gp :- subj "set title 'suj"*string(subj)*"'"
+    @gp :- subj tfhm_mean_post[subj]./sum(tfhm_mean_post[subj]) "origin=(0, -3840.0) dx=0.1 dy=10 w image"
 end
 p1 = @gp :- ""
 
