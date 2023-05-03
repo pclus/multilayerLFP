@@ -79,6 +79,7 @@ function cut_cortex(fl,n0,nf,m=9000000)
     tf = dt*m
 
     fout = open("../1_data/cortex_" * fl * ".bin", "w")
+    # fout = open("../1_data/cortex_" * fl * ".bin", "w")
 
     bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=rate), Butterworth(3))
     # bsfilter  = digitalfilter(Bandstop(49.9,50.1; fs=rate),Butterworth(1))
@@ -281,10 +282,12 @@ end
 """
 function process_data(n0,nf;mpre=9000000,mpost=9000000)
     n=length(n0:nf)
-    cut_cortex("pre",n0,nf, mpre)
-    cut_cortex("post",n0,nf, mpost)
-    compute_bipolar("cortex_pre","bipolar_pre",n,mpre)   
-    compute_bipolar("cortex_post","bipolar_post",n,mpost) 
+    # cut_cortex("pre",n0,nf, mpre)
+    # cut_cortex("post",n0,nf, mpost)
+    # compute_bipolar("cortex_pre","bipolar_pre",n,mpre)   
+    # compute_bipolar("cortex_post","bipolar_post",n,mpost)
+    compute_bipolar("pre","bipolar_pre",n,mpre)   
+    compute_bipolar("post","bipolar_post",n,mpost)  
     # compute_csd("cortex_pre","csd_pre",n,mpre)           
     # compute_csd("cortex_post","csd_post",n,mpost)         
 end
