@@ -3,7 +3,7 @@ module NeuropixelAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTests,FFTW,MAT,Distributions
 
 export DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTest,FFTW,MAT,Distributions
-export read_channel,channel_idx,heatmapMT,timefreq,movfilter,
+export read_channel,channel_idx,heatmapMT,movfilter,
 process_data,relative_power,depth,prepost_analysis
 export logspectral_dist,export_matfile
 
@@ -79,6 +79,7 @@ function cut_cortex(fl,n0,nf,m=9000000)
     tf = dt*m
 
     fout = open("../1_data/cortex_" * fl * ".bin", "w")
+    # fout = open("../1_data/cortex_" * fl * ".bin", "w")
 
     bpfilter = digitalfilter(Bandpass(1.0, 300.0; fs=rate), Butterworth(3))
     # bsfilter  = digitalfilter(Bandstop(49.9,50.1; fs=rate),Butterworth(1))
@@ -210,44 +211,45 @@ function channel_idx(ch_id)
     return i
 end
 
-"""
-    timefreq(id, fl)
+# DEPRECATED, DSP package does a much better job.
+# """
+#     timefreq(id, fl)
 
-Computes the time-frequency heatmap with MT-PSD using segments of 10s
-"""
-function timefreq(id::Integer, fl::String; Δt=10.0, m=9000000)
-    dt = 0.0004
-    t, y = read_channel(id,fl ; t0=dt, tf=m*dt, m=m)    # time series starts at 4e-4
-    timefreq(y;Δt)
-end
+# Computes the time-frequency heatmap with MT-PSD using segments of 10s
+# """
+# function timefreq(id::Integer, fl::String; Δt=10.0, m=9000000)
+#     dt = 0.0004
+#     t, y = read_channel(id,fl ; t0=dt, tf=m*dt, m=m)    # time series starts at 4e-4
+#     timefreq(y;Δt)
+# end
 
-function timefreq(y::Vector{Float64};Δt=10.0)
-    rate = 2500.0
-    dt = 1.0 / rate
-    T  = length(y)/rate     # total length
-    ns = Int(floor(T / Δt))    # number of segments
-    m = Int(rate*Δt)    # segments of 10 seconds
-    l = Int(min(2000,Δt*rate/2+1))       # but...up to l is enough to get the relevant freqs
-    NW = 1.0 * m * dt / (2.0)
-    K = 8
+# function timefreq(y::Vector{Float64};Δt=10.0)
+#     rate = 2500.0
+#     dt = 1.0 / rate
+#     T  = length(y)/rate     # total length
+#     ns = Int(floor(T / Δt))    # number of segments
+#     m = Int(rate*Δt)    # segments of 10 seconds
+#     l = Int(min(2000,Δt*rate/2+1))       # but...up to l is enough to get the relevant freqs
+#     NW = 1.0 * m * dt / (2.0)
+#     K = 8
 
-    tfhm = zeros(l, ns)   # time-freq heatmap
-    local S    # so that S exists outside the loop
-    for s in 1:ns
-        segdat = y[((s-1)*m+1):s*m]
-        S = multispec(segdat, dt=dt, NW=NW, K=K)
-        tfhm[:, s] = S.S[1:l]
-        if s % 5 == 0
-            print(s, "\r")
-            flush(stdout)
-        end
-    end
+#     tfhm = zeros(l, ns)   # time-freq heatmap
+#     local S    # so that S exists outside the loop
+#     for s in 1:ns
+#         segdat = y[((s-1)*m+1):s*m]
+#         S = multispec(segdat, dt=dt, NW=NW, K=K)
+#         tfhm[:, s] = S.S[1:l]
+#         if s % 5 == 0
+#             print(s, "\r")
+#             flush(stdout)
+#         end
+#     end
 
-    freqs = collect(S.f[1:l])
-    times = collect(0.5*Δt:Δt:Δt*ns)
+#     freqs = collect(S.f[1:l])
+#     times = collect(0.5*Δt:Δt:Δt*ns)
 
-    times, freqs, tfhm
-end
+#     times, freqs, tfhm
+# end
 
 
 """
@@ -280,10 +282,12 @@ end
 """
 function process_data(n0,nf;mpre=9000000,mpost=9000000)
     n=length(n0:nf)
-    cut_cortex("pre",n0,nf, mpre)
-    cut_cortex("post",n0,nf, mpost)
-    compute_bipolar("cortex_pre","bipolar_pre",n,mpre)   
-    compute_bipolar("cortex_post","bipolar_post",n,mpost) 
+    # cut_cortex("pre",n0,nf, mpre)
+    # cut_cortex("post",n0,nf, mpost)
+    # compute_bipolar("cortex_pre","bipolar_pre",n,mpre)   
+    # compute_bipolar("cortex_post","bipolar_post",n,mpost)
+    compute_bipolar("pre","bipolar_pre",n,mpre)   
+    compute_bipolar("post","bipolar_post",n,mpost)  
     # compute_csd("cortex_pre","csd_pre",n,mpre)           
     # compute_csd("cortex_post","csd_post",n,mpost)         
 end
@@ -444,12 +448,17 @@ function tfhm_analysis(id, fl, flmov ; m=9000000, Δt=10.0)
     rate = 2500;
     dt = 0.0004
     t, y = read_channel(id, fl; t0=dt, tf=m*dt, m=m)
+    NW = 1.0*Δt/(2.0)
+    K = 8
+    l = 2000;
 
     T  = floor(length(y)/rate);
     ns = Int(floor(T / Δt));
     y = y[1:Int(floor(m/ns)*ns)]    # length `m` might not coincide with multiple of Δt*dt
 
-    t, f, tfhm = timefreq(y);
+    # t, f, tfhm = timefreq(y);
+    s = mt_spectrogram( y , 2500*10 , 0 ; fs=rate , nw=NW , ntapers=K );
+    t = s.time; f = s.freq[1:l]; tfhm = 0.5*s.power[1:l,:];
     smean = mean(tfhm,dims=2)[:,1];
     q = [logspectral_dist(tfhm[:,i],smean,f) for i in 1:ns]
     tr, f_tfhm = movfilter(t,tfhm,flmov; Δt, q=q)
