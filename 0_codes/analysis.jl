@@ -24,9 +24,10 @@ Q0_pre=Dict()
 Q_post=Dict()
 Q0_post=Dict()
 
-for subj in [8,9,10,11,12,13,15,16,18,20]
+for subj in [8,10,11,12,13,15,16,18,20]
     data = "bipolar_"
     foutname = "suj"*string(subj)*"/"
+    # namebase = "../4_outputs/pipeline/full/"*foutname*data
     namebase = "../4_outputs/pipeline/"*foutname*data
 
     tfhm_mean_pre[subj]=readdlm(namebase*"tfhm_mean_pre.dat")
@@ -47,6 +48,7 @@ for subj in [8,9,10,11,12,13,15,16,18,20]
     Q0_post[subj]=readdlm(namebase*"Q0_post.dat")
 end
 dp = depth("bipolar",132)
+# dp = depth("bipolar",380)
 
 # total power, missing from the analysis...
 total_pre=Dict()
@@ -298,15 +300,19 @@ set yrange[-3840:0.0];
 set cbrange[0.5e-6:0.1e-4];
 unset key;
 set border lw 1;
-set multiplot layout 2,5 title 'Normalized power POST' ;
+set multiplot layout 2,5 title 'Normalized power PRE' ;
 set xlabel 'Freq [Hz]'
 set ylabel 'Depth [μm]'
 set colorbox
 set cbtics format '1e%T'" :-
 
-for subj in [8,10,11,12,13,15]
-    @gp :- subj "set title 'suj"*string(subj)*"'"
-    @gp :- subj tfhm_mean_post[subj]./sum(tfhm_mean_post[subj]) "origin=(0, -3840.0) dx=0.1 dy=10 w image"
+for subj in [8,9,10,11,12,13,15,16,18,20]
+    if subj==9
+        @gp :- subj "set multiplot next;" :-
+    else
+        @gp :- subj "set title 'suj"*string(subj)*"'"
+        @gp :- subj tfhm_mean_pre[subj]./sum(tfhm_mean_pre[subj]) "origin=(0, -3840.0) dx=0.1 dy=10 w image"
+    end
 end
 p1 = @gp :- ""
 
