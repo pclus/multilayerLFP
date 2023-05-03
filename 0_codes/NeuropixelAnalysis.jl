@@ -3,8 +3,8 @@ module NeuropixelAnalysis
 using DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTests,FFTW,MAT,Distributions
 
 export DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTest,FFTW,MAT,Distributions
-export read_channel,channel_idx,heatmapMT,movfilter,
-process_data,relative_power,depth,prepost_analysis
+export read_channel,channel_idx,heatmapMT,movfilter,process_data,relative_power,depth,prepost_analysis
+export compute_bipolar_horizontal
 export logspectral_dist,export_matfile
 
 
@@ -41,14 +41,19 @@ from the binary file identified by `fl`.
 julia> v158=read_channel(158,0.0004,900,"filtered_pre");
 ```
 """
-function read_channel(id,fl; t0 = 0.0004, tf=3600.0, m=9000000) # Equivalent to the read_binary.c code
+function read_channel(id,fl; t0 = 0.0004, tf=3600.0, m=9000000,kpath="local") # Equivalent to the read_binary.c code
     id = Int(id)
     n = 384
     dt = 1.0 / 2500.0
 
+    if kpath=="local"
+        path = "../1_data/"
+    else
+        path = "/home/pclusella/Documents/Athena/UPO_data_processed/"*kpath*"/"
+    end
 
     data = zeros(m)
-    fin = open("../1_data/" * fl * ".bin", "r")
+    fin = open(path * fl * ".bin", "r")
     for i in 0:id
         read!(fin, data)
     end
@@ -101,7 +106,6 @@ end
 
 Store in a binary file the bipolar data obtained by computing the first 
 derivative of the data using a symmetric stencil in along each neuropixel column.
-SHOULD BE CHANGED TO TAKE next-current INSTEAD OF next-previous
 """
 function compute_bipolar(flin,flout,n,m=9000000)
     rate = 2500.0
@@ -139,6 +143,36 @@ function compute_bipolar(flin,flout,n,m=9000000)
         write(fout, bip_b)
         write(fout, bip_c)
         write(fout, bip_d)
+
+    end
+    close(fout)
+
+end
+
+"""
+    compute_bipolar(fl)
+
+Store in a binary file the  horizontal difference between pairs of electrodes at the same depth
+"""
+function compute_bipolar_horizontal(flin,flout,n,m=9000000)
+    rate = 2500.0
+    dt = 1 / rate
+    t0 = dt
+    tf = m*dt
+
+    fout = open("../1_data/"* flout * ".bin", "w")
+
+    inv_dy = 1 / 20.0 # 1/μm
+
+    # nf = n - n%2
+    nf = n
+    for id in 0:2:nf-1
+        t, curr_a = read_channel(id    , flin; t0=t0, tf=tf, m=m)
+        t, curr_b = read_channel(id + 1, flin; t0=t0, tf=tf, m=m)
+
+        bip_0 = - inv_dy * (curr_a - curr_b)
+
+        write(fout, bip_0)
 
     end
     close(fout)
@@ -211,46 +245,6 @@ function channel_idx(ch_id)
     return i
 end
 
-# DEPRECATED, DSP package does a much better job.
-# """
-#     timefreq(id, fl)
-
-# Computes the time-frequency heatmap with MT-PSD using segments of 10s
-# """
-# function timefreq(id::Integer, fl::String; Δt=10.0, m=9000000)
-#     dt = 0.0004
-#     t, y = read_channel(id,fl ; t0=dt, tf=m*dt, m=m)    # time series starts at 4e-4
-#     timefreq(y;Δt)
-# end
-
-# function timefreq(y::Vector{Float64};Δt=10.0)
-#     rate = 2500.0
-#     dt = 1.0 / rate
-#     T  = length(y)/rate     # total length
-#     ns = Int(floor(T / Δt))    # number of segments
-#     m = Int(rate*Δt)    # segments of 10 seconds
-#     l = Int(min(2000,Δt*rate/2+1))       # but...up to l is enough to get the relevant freqs
-#     NW = 1.0 * m * dt / (2.0)
-#     K = 8
-
-#     tfhm = zeros(l, ns)   # time-freq heatmap
-#     local S    # so that S exists outside the loop
-#     for s in 1:ns
-#         segdat = y[((s-1)*m+1):s*m]
-#         S = multispec(segdat, dt=dt, NW=NW, K=K)
-#         tfhm[:, s] = S.S[1:l]
-#         if s % 5 == 0
-#             print(s, "\r")
-#             flush(stdout)
-#         end
-#     end
-
-#     freqs = collect(S.f[1:l])
-#     times = collect(0.5*Δt:Δt:Δt*ns)
-
-#     times, freqs, tfhm
-# end
-
 
 """
     movfilter(t, tfhm, fl)
@@ -259,9 +253,15 @@ If Q is is assigned, then it also removes segments with Q
 larger than a certain threshold.
 This function assumes segments of Δt=10
 """
-function movfilter(t, tfhm, fl;Δt=10.0,q = zeros(1))
+function movfilter(t, tfhm, fl;Δt=10.0,q = zeros(1),kpath="local")
 
-    mov_pre = readdlm("../1_data/mov_" * fl * ".dat", ' ')
+    if kpath=="local"
+        path = "../1_data/"
+    else
+        path = "/home/pclusella/Documents/Athena/UPO_data_processed/"*kpath*"/"
+    end
+
+    mov_pre = readdlm(path * fl * ".dat", ' ')
     if q!=zeros(1)
         d=Normal(mean(q),std(q))
         ctop = quantile(d,0.975)
@@ -289,7 +289,9 @@ function process_data(n0,nf;mpre=9000000,mpost=9000000)
     compute_bipolar("pre","bipolar_pre",n,mpre)   
     compute_bipolar("post","bipolar_post",n,mpost)  
     # compute_csd("cortex_pre","csd_pre",n,mpre)           
-    # compute_csd("cortex_post","csd_post",n,mpost)         
+    # compute_csd("cortex_post","csd_post",n,mpost)        
+    compute_bipolar_horizontal("pre" ,"horizontal_pre",n,mpre)
+    compute_bipolar_horizontal("post","horizontal_post",n,mpost) 
 end
 
 
@@ -298,7 +300,7 @@ end
 
 Compute the mean spectra and perform comparison between pre and post for all datatypes.
 """
-function prepost_analysis(n0,nf;mpre=9000000,mpost=9000000,foutname = "temp_") # ISSUE: incorporate datatypes in the function call
+function prepost_analysis(n0,nf,subj;mpre=9000000,mpost=9000000) # ISSUE: incorporate datatypes in the function call
     l = 2000;
     n=size(n0:nf)[1]
     ns=[n-4, n, n, n/2-2,]
@@ -317,7 +319,7 @@ function prepost_analysis(n0,nf;mpre=9000000,mpost=9000000,foutname = "temp_") #
         n0=ns[i];
         # stats_band_pre[data], stats_band_post[data], pvals_α[data], pvals_γ[data], 
         # Qpre[data], Q0pre[data], Qpost[data], Q0post[data] =
-        prepost_comparison(data,n0;mpre = mpre , mpost = mpost, foutname=foutname);
+        prepost_comparison(data,n0,subj;mpre = mpre , mpost = mpost);
     end
 
     # return stats_band_pre, stats_band_post, pvals_α , pvals_γ
@@ -327,7 +329,7 @@ function prepost_analysis(n0,nf;mpre=9000000,mpost=9000000,foutname = "temp_") #
 end
 
 
-function prepost_comparison(data,n0; mpre=9000000, mpost=9000000, foutname = "temp_")
+function prepost_comparison(data,n0,subj; mpre=9000000, mpost=9000000)
     l = 2000
 
     psd_mean_tfhm_pre = zeros(n0, l);
@@ -363,14 +365,14 @@ function prepost_comparison(data,n0; mpre=9000000, mpost=9000000, foutname = "te
 
 
         # Pre
-        f,tfhm_pre,Q_pre[id+1,:],Q0,tr = tfhm_analysis(id, data*"pre", "pre" ; m=mpre); Q0_pre[id+1,tr]=Q0;
+        f,tfhm_pre,Q_pre[id+1,:],Q0,tr = tfhm_analysis(id, data*"pre", "pre" ; m=mpre,kpath=string(subj)); Q0_pre[id+1,tr]=Q0;
         # t, f, tfhm = timefreq(id, data*"pre"; m = mpre)
         # idx, tfhm_pre = movfilter(t, tfhm, "pre")
         psd_mean_tfhm_pre[id+1, :] = mean(tfhm_pre, dims=2)
         psd_std_tfhm_pre[id+1, :] = std(tfhm_pre, dims=2)
 
         # Post
-        f,tfhm_post,Q_post[id+1,:],Q0,tr = tfhm_analysis(id, data*"post", "post" ; m=mpost); Q0_post[id+1,tr]=Q0;
+        f,tfhm_post,Q_post[id+1,:],Q0,tr = tfhm_analysis(id, data*"post", "post" ; m=mpost,kpath=string(subj)); Q0_post[id+1,tr]=Q0;
         # t, f, tfhm = timefreq(id, data*"post"; m = mpost)
         # idx, tfhm_post = movfilter(t, tfhm, "post")
         psd_mean_tfhm_post[id+1, :] = mean(tfhm_post, dims=2)
@@ -404,6 +406,7 @@ function prepost_comparison(data,n0; mpre=9000000, mpost=9000000, foutname = "te
         end
     end
 
+    foutname=string(subj)*"/"
     namebase = "../4_outputs/pipeline/"*foutname*data
     writedlm(namebase*"tfhm_mean_post.dat",psd_mean_tfhm_post," ")
     writedlm(namebase*"tfhm_mean_pre.dat",psd_mean_tfhm_pre," ")
@@ -444,10 +447,10 @@ function numberofsegments(fl;m=9000000,Δt=10.0)
 end
 
 
-function tfhm_analysis(id, fl, flmov ; m=9000000, Δt=10.0)
+function tfhm_analysis(id, fl, flmov ; m=9000000, Δt=10.0,kpath="local")
     rate = 2500;
     dt = 0.0004
-    t, y = read_channel(id, fl; t0=dt, tf=m*dt, m=m)
+    t, y = read_channel(id, fl; t0=dt, tf=m*dt, m=m,kpath=kpath)
     NW = 1.0*Δt/(2.0)
     K = 8
     l = 2000;
