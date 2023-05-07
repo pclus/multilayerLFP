@@ -230,15 +230,20 @@ set yrange[-1545.92:-245.92];
 set cbrange[1e-6:0.5e-4];
 unset key;
 set border lw 1;
-set multiplot layout 2,5 title 'Normalized power POST' ;
+set multiplot layout 2,5 title 'Normalized power PRE' ;
 set xlabel 'Freq [Hz]'
 set ylabel 'Depth [μm]'
 set colorbox
 set cbtics format '1e%T'" :-
 
 for subj in [8,9,10,11,12,13,15,16,18,20]
-    @gp :- subj "set title 'suj"*string(subj)*"'"
-    @gp :- subj tfhm_mean_post[subj]./sum(tfhm_mean_post[subj]) "origin=(0, -1545.92) dx=0.1 dy=10 w image"
+    if subj==9
+        @gp :- subj "set multiplot next;" :-
+    else
+        @gp :- subj "set title 'suj"*string(subj)*"'"
+        @gp :- subj tfhm_mean_pre[subj]./sum(tfhm_mean_pre[subj]) "origin=(0, -1545.92) dx=0.1 dy=10 w image"
+
+    end
 end
 p1 = @gp :- ""
 
@@ -297,6 +302,7 @@ set pale @RAINBOW;
 set xrange[0:100]; 
 set logs zcb;
 set yrange[-3840:0.0];
+set yrange[-1545.92:-245.92];
 set cbrange[0.5e-6:0.1e-4];
 unset key;
 set border lw 1;
