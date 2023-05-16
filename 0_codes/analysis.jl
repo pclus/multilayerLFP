@@ -2,8 +2,8 @@
 
 cd("0_codes/")
 push!(LOAD_PATH, pwd())
-using NeuropixelAnalysis,SpectralAnalysis
-using DelimitedFiles, Multitaper, Plots, DSP, Statistics,HypothesisTests
+using NeuropixelAnalysis #,SpectralAnalysis
+using DelimitedFiles, Plots, DSP, Statistics,HypothesisTests
 using StatsBase
 using ColorSchemes,LaTeXStrings,Measures
 
@@ -47,8 +47,10 @@ for subj in [8,10,11,12,13,15,16,18,20]
     Q_post[subj]=readdlm(namebase*"Q_post.dat")
     Q0_post[subj]=readdlm(namebase*"Q0_post.dat")
 end
-dp = depth("bipolar",132)
-# dp = depth("bipolar",380)
+layers = readdlm("../1_data/layers.dat",skipstart=5)
+n0 = 384-layers[end,1];
+nf = 384-layers[2,1]+1;
+dp = @. depth(n0:nf)
 
 # total power, missing from the analysis...
 total_pre=Dict()
@@ -69,8 +71,7 @@ function fillhoriz(data,dp)
 end
 
 
-subj=9
-
+# subj=9
 # # Relative power filled with color
 # plot(xlabel="Rel. power",ylabel="depth [μm]")
 # plot!(fillhoriz(band_stats_pre[subj][:,3] + band_stats_pre[subj][:,4],dp), label = "α",
@@ -80,11 +81,14 @@ subj=9
 # plot!(band_stats_post[subj][:,4],dp, label="",lc=2,ls=:dash)
 # plot!(band_stats_pre[subj][:,3]+band_stats_post[subj][:,4],dp, label="",lc=1,ls=:dash)
 
+#-----------------------------------------------------
+# Relative power multipanel
+#-----------------------------------------------------
+# Multipanel figure with pre and post relative power (i.e., amount of α and γ within the layer).
 
-# Plain relative power
 pls = Any[]
 pythonplot()
-for subj in [8,9,10,11,12,13,15,16,18,20]
+for subj in [8,10,11,12,13,15,16,18,20]
     plot(xlabel="Rel. power",ylabel="depth [μm]",title="suj"*string(subj))
     plot!(band_stats_pre[subj][:,3],dp, label = "αₚᵣₑ", lc=1, fc=1, lw =2,
         xlim=(0,1.0),ylim=(dp[1],dp[end]),framestyle=:box)
@@ -97,8 +101,146 @@ plot(pls...,layout=(2,5),size=(600*3,400*2),legend=:bottomright,xformatter=:auto
 bottommargin=10mm,topmargin=2mm)
 # savefig("../3_figures/global/Fig_RelPower.pdf")
 
+#-----------------------------------------------------
+# Relative power mean
+#-----------------------------------------------------
+# Same as multipanel, but with mean for each case 
+# Grey lines depict individual results.
+# We use strider to select only 2 out of the 4 neuropixel columns.
+
+α= [ band_stats_pre[i][j,3] for j in 1:142 , (i,a) in band_stats_pre]
+γ= [ band_stats_pre[i][j,4] for j in 1:142 , (i,a) in band_stats_pre]
+
+mα = mean(α,dims=2)[:,1]
+sα = std(α,dims=2)[:,1]
+mγ = mean(γ,dims=2)[:,1]
+sγ = std(γ,dims=2)[:,1]
+
+strider = 1:2:142
+plot()
+for subj in [8,10,11,12,13,15,16,18,20]
+    plot!(band_stats_pre[subj][strider,3],dp[strider],lw=0.1,lc=:grey,label="")
+    plot!(band_stats_pre[subj][strider,4],dp[strider],lw=0.1,lc=:grey,label="")
+end
+
+plot!(mα[strider],dp[strider],lc=1,label="α")
+plot!(mγ[strider],dp[strider],lc=2,label="γ")
+
+L = @. depth(384-layers[2:end,:])[:,1]
+hline!(L[1:2:end],lc=:black,lw=0.5,label="")
+plot!(xlabel="Rel. power",ylabel="Depth [μm]")
+plot!(size=(300,400))
+savefig("../3_figures/global/mean_rel_power.pdf")
+
+writedlm("../bipolar_relpower_9subjects.dat",[dp[strider] mα[strider] mγ[strider]],' ')
+
+#-----------------------------------------------------
+# Total power
+#-----------------------------------------------------
+# Figure showing the α and γ powers.
+# Here the only normalization is to make sure that power accross subjects are comparable
+# This means that for each subject we compute the sum of all powers across layers and normalize 
+# by this quantity. In this way the changes of power across layers for a single subject 
+# are mantained.
+tot = Dict()
+for (i,a) in total_pre 
+    tot[i] = sum(total_pre[i]) 
+end
+α= [ band_stats_pre[i][j,1]/tot[i] for j in 1:142 , (i,a) in band_stats_pre]
+γ= [ band_stats_pre[i][j,2]/tot[i] for j in 1:142 , (i,a) in band_stats_pre]
+
+mα = mean(α,dims=2)[:,1]
+sα = std(α,dims=2)[:,1]
+mγ = mean(γ,dims=2)[:,1]
+sγ = std(γ,dims=2)[:,1]
+
+strider = 1:2:142
+
+plot()
+for subj in 1:9
+    plot!(α[strider,subj],dp[strider],lw=0.1,lc=:grey,label="")
+    plot!(γ[strider,subj],dp[strider],lw=0.1,lc=:grey,label="")
+end
+plot!(mα[strider],dp[strider],lc=1,label="α")
+plot!(mγ[strider],dp[strider],lc=2,label="γ")
+
+plot!(xaxis=:log)
+L = @. depth(384-layers[2:end,:])[:,1]
+hline!(L[1:2:end],lc=:black,lw=0.5,label="")
+plot!(xlabel="Power",ylabel="Depth [μm]")
+plot!(size=(300,400))
+savefig("../3_figures/global/mean_power.pdf")
+
+#-----------------------------------------------------
+# Bastos relative power (mean)
+#-----------------------------------------------------
+# Departing from the averages obtained in the previous plot,
+# we divide by the peak α and peak γ. 
+# We just do this for the mean, so the individual trajectories might display
+# peaks above or below 1.
+
+maxα = maximum(mα[strider])
+maxγ = maximum(mγ[strider])
+plot()
+for subj in 1:9
+    plot!(α[strider,subj]./maxα,dp[strider],lw=0.1,lc=:grey,label="")
+    plot!(γ[strider,subj]./maxγ,dp[strider],lw=0.1,lc=:grey,label="")
+end
+plot!(mα[strider]./maxα,dp[strider],label="α",lc=1)
+plot!(mγ[strider]./maxγ,dp[strider],label="γ",lc=2)
+hline!(L[1:2:end],lc=:black,lw=0.5,label="")
+plot!(xlabel="Power/Max. Power",ylabel="Depth [μm]")
+plot!(size=(300,400),xlim=(0,1.2))
+savefig("../3_figures/global/mean_relmax_power.pdf")
+
+#-----------------------------------------------------
+# Bastos relative power (individual)
+#-----------------------------------------------------
+# Again, we divide each power by the peak across layers,
+# but in this case we do it for each subject separately.
+# Therefore, each subject and each power display a layer with rel. power equal to 1.
+# But the averages are different. 
+
+strider = 1:2:142
+α= [ band_stats_pre[i][j,1]/maximum(band_stats_pre[i][strider,1]) for j in 1:142 , (i,a) in band_stats_pre]
+γ= [ band_stats_pre[i][j,2]/maximum(band_stats_pre[i][strider,2]) for j in 1:142 , (i,a) in band_stats_pre]
+
+mα = mean(α,dims=2)[:,1]
+sα = std(α,dims=2)[:,1]
+mγ = mean(γ,dims=2)[:,1]
+sγ = std(γ,dims=2)[:,1]
+
+plot()
+for subj in 1:9
+    maxα = maximum(α[strider,subj])
+    maxγ = maximum(γ[strider,subj])
+    plot!(α[strider,subj],dp[strider],lw=0.1,lc=:grey,label="")
+    plot!(γ[strider,subj],dp[strider],lw=0.1,lc=:grey,label="")
+end
+plot!()
+
+plot!(mα[strider]./maxα,dp[strider],label="α",lc=1)
+plot!(mγ[strider]./maxγ,dp[strider],label="γ",lc=2)
+hline!(L[1:2:end],lc=:black,lw=0.5,label="")
+plot!(xlabel="Power/Max. Power",ylabel="Depth [μm]")
+plot!(size=(300,400),xlim=(0,1.0))
+savefig("../3_figures/global/mean_relmax_power2.pdf")
 
 
+#-----------------------------------------------------
+#-----------------------------------------------------
+#-----------------------------------------------------
+
+
+# Total power diverges a lot, so it makes sense to normalize
+plot()
+for subj in [8,10,11,12,13,15,16,18,20]
+    plot!(total_pre[subj][:],dp, lc=3, fc=1, lw =1,#xlim=(0,5e-13),
+        ylim=(dp[1],dp[end]),framestyle=:box,label="pre",title="suj"*string(subj))
+end
+plot!(xaxis=:log,lw=1,legend=false)
+
+#-----------------------------------------------------
 pythonplot()
 plot(xlabel="Rel. power",ylabel="depth [μm]")
 for subj in [8,9,10,11,12,13,15,16,18,20]
@@ -159,7 +301,7 @@ savefig("../3_figures/global/Fig_PostPre.pdf")
 # gr()
 pythonplot()
 pls = Any[]
-for subj in [8,9,10,11,12,13,15,16,18,20]
+for subj in [8,10,11,12,13,15,16,18,20]
     plot(xlabel="Total power",ylabel="Depth [μm]")
     plot!(total_pre[subj][:],dp, lc=3, fc=1, lw =2,#xlim=(0,5e-13),
         ylim=(dp[1],dp[end]),framestyle=:box,label="pre",title="suj"*string(subj))

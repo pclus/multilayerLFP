@@ -1,8 +1,8 @@
 module NeuropixelAnalysis
 
-using DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTests,FFTW,MAT,Distributions
+using DelimitedFiles, Plots, DSP,Statistics,HypothesisTests,FFTW,MAT,Distributions
 
-export DelimitedFiles, Multitaper, Plots, DSP,Statistics,HypothesisTest,FFTW,MAT,Distributions
+export DelimitedFiles, Plots, DSP,Statistics,HypothesisTest,FFTW,MAT,Distributions
 export read_channel,channel_idx,heatmapMT,movfilter,process_data,relative_power,depth,prepost_analysis
 export compute_bipolar_horizontal
 export logspectral_dist,export_matfile
@@ -41,7 +41,7 @@ from the binary file identified by `fl`.
 julia> v158=read_channel(158,0.0004,900,"filtered_pre");
 ```
 """
-function read_channel(id,fl; t0 = 0.0004, tf=3600.0, m=9000000,kpath="local") # Equivalent to the read_binary.c code
+function read_channel(id,fl; t0 = 0.0004, tf=3600.0, m=9000000,kpath="local") 
     id = Int(id)
     n = 384
     dt = 1.0 / 2500.0
@@ -301,25 +301,25 @@ end
 Compute the mean spectra and perform comparison between pre and post for all datatypes.
 """
 function prepost_analysis(n0,nf,subj;mpre=9000000,mpost=9000000) # ISSUE: incorporate datatypes in the function call
-    l = 2000;
-    n=size(n0:nf)[1]
-    ns=[n-4, n, n, n/2-2,]
-    ns=Int.(ns)
+    # l = 2000;
+    # n=size(n0:nf)[1]
+    # ns=[n-4, n, n, n/2-2,]
+    # ns=Int.(ns)
 
-    stats_band_pre = Dict();
-    stats_band_post = Dict();
-    pvals_α = Dict();
-    pvals_γ = Dict();
-    Qpre = Dict();
-    Q0pre = Dict();
-    Qpost = Dict();
-    Q0post = Dict();
+    # stats_band_pre = Dict();
+    # stats_band_post = Dict();
+    # pvals_α = Dict();
+    # pvals_γ = Dict();
+    # Qpre = Dict();
+    # Q0pre = Dict();
+    # Qpost = Dict();
+    # Q0post = Dict();
     # for (i,data) in enumerate(("bipolar_","kcsd_","cortex_","csd_"))
     for (i,data) in enumerate(("bipolar_",))
-        n0=ns[i];
+        # n0=ns[i];
         # stats_band_pre[data], stats_band_post[data], pvals_α[data], pvals_γ[data], 
         # Qpre[data], Q0pre[data], Qpost[data], Q0post[data] =
-        prepost_comparison(data,n0,subj;mpre = mpre , mpost = mpost);
+        prepost_comparison(data,n0,nf,subj;mpre = mpre , mpost = mpost);
     end
 
     # return stats_band_pre, stats_band_post, pvals_α , pvals_γ
@@ -329,58 +329,53 @@ function prepost_analysis(n0,nf,subj;mpre=9000000,mpost=9000000) # ISSUE: incorp
 end
 
 
-function prepost_comparison(data,n0,subj; mpre=9000000, mpost=9000000)
+function prepost_comparison(data,n0,nf,subj; mpre=9000000, mpost=9000000)
     l = 2000
+    n = length(n0:nf)
 
-    psd_mean_tfhm_pre = zeros(n0, l);
-    psd_std_tfhm_pre = zeros(n0, l);
-    psd_mean_tfhm_post = zeros(n0, l);
-    psd_std_tfhm_post = zeros(n0, l);
-    # pvals_tfhm = zeros(n0, l);
-    # pvals_uneq_tfhm = zeros(n0, l);
-    pvals_perm_tfhm = zeros(n0, l);
+    psd_mean_tfhm_pre = zeros(n, l);
+    psd_std_tfhm_pre = zeros(n, l);
+    psd_mean_tfhm_post = zeros(n, l);
+    psd_std_tfhm_post = zeros(n, l);
+    # pvals_tfhm = zeros(n, l);
+    # pvals_uneq_tfhm = zeros(n, l);
+    pvals_perm_tfhm = zeros(n, l);
 
-    stats_band_pre = zeros(n0,10)
-    stats_band_post = zeros(n0,10)
-    pvals_α = zeros(n0,2)
-    pvals_γ = zeros(n0,2)
+    stats_band_pre = zeros(n,10)
+    stats_band_post = zeros(n,10)
+    pvals_α = zeros(n,2)
+    pvals_γ = zeros(n,2)
 
     # ns_pre = NeuropixelAnalysis.numberofsegments("pre";m=mpre)
     # ns_post = NeuropixelAnalysis.numberofsegments("post";m=mpost)
     ns_pre = Int(floor(mpre/25000));
     ns_post = Int(floor(mpost/25000));
-    Q_pre = zeros(n0,ns_pre)
-    Q0_pre = zeros(n0,ns_pre)
-    Q_post = zeros(n0,ns_post)
-    Q0_post = zeros(n0,ns_post)
-    # pvals_Q = zeros(n0,2)
+    Q_pre = zeros(n,ns_pre)
+    Q0_pre = zeros(n,ns_pre)
+    Q_post = zeros(n,ns_post)
+    Q0_post = zeros(n,ns_post)
+    # pvals_Q = zeros(n,2)
 
     state = Threads.Atomic{Int}(0);
 
-    Threads.@threads for id in 0:n0-1
+    Threads.@threads for id in 0:n-1
         # Prompt state
         Threads.atomic_add!(state, 1)
-        print("--> ", state[], " out of ", n0, "\n")
+        print("--> ", state[], " out of ", n, "\n")
         flush(stdout)
 
 
         # Pre
-        f,tfhm_pre,Q_pre[id+1,:],Q0,tr = tfhm_analysis(id, data*"pre", "pre" ; m=mpre,kpath=string(subj)); Q0_pre[id+1,tr]=Q0;
-        # t, f, tfhm = timefreq(id, data*"pre"; m = mpre)
-        # idx, tfhm_pre = movfilter(t, tfhm, "pre")
+        f,tfhm_pre,Q_pre[id+1,:],Q0,tr = tfhm_analysis(n0 + id - 4, data*"pre", "mov_pre" ; m=mpre,kpath=string(subj)); 
+        Q0_pre[id+1,tr]=Q0;
         psd_mean_tfhm_pre[id+1, :] = mean(tfhm_pre, dims=2)
         psd_std_tfhm_pre[id+1, :] = std(tfhm_pre, dims=2)
 
         # Post
-        f,tfhm_post,Q_post[id+1,:],Q0,tr = tfhm_analysis(id, data*"post", "post" ; m=mpost,kpath=string(subj)); Q0_post[id+1,tr]=Q0;
-        # t, f, tfhm = timefreq(id, data*"post"; m = mpost)
-        # idx, tfhm_post = movfilter(t, tfhm, "post")
+        f,tfhm_post,Q_post[id+1,:],Q0,tr = tfhm_analysis(n0 + id - 4, data*"post", "mov_post" ; m=mpost,kpath=string(subj)); 
+        Q0_post[id+1,tr]=Q0;
         psd_mean_tfhm_post[id+1, :] = mean(tfhm_post, dims=2)
         psd_std_tfhm_post[id+1, :] = std(tfhm_post, dims=2)
-
-        # Compare Q and Q0 # DEPRECATED, we are not using surrogate analysis right now
-        # pvals_Q[id+1,1] = pvalue(ApproximateTwoSampleKSTest(Q_pre[id+1,:], Q0_pre[id+1,:]))
-        # pvals_Q[id+1,2] = pvalue(ApproximateTwoSampleKSTest(Q_post[id+1,:], Q0_post[id+1,:]))
 
         # band analysis 
         α_pre, γ_pre, total_pre = relative_power_from_segments(f,tfhm_pre)
@@ -464,7 +459,7 @@ function tfhm_analysis(id, fl, flmov ; m=9000000, Δt=10.0,kpath="local")
     t = s.time; f = s.freq[1:l]; tfhm = 0.5*s.power[1:l,:];
     smean = mean(tfhm,dims=2)[:,1];
     q = [logspectral_dist(tfhm[:,i],smean,f) for i in 1:ns]
-    tr, f_tfhm = movfilter(t,tfhm,flmov; Δt, q=q)
+    tr, f_tfhm = movfilter(t,tfhm,flmov; Δt, q=q, kpath=kpath)
 
     fsmean = mean(f_tfhm,dims=2)[:,1];
     ns = length(tr)
@@ -474,7 +469,6 @@ function tfhm_analysis(id, fl, flmov ; m=9000000, Δt=10.0,kpath="local")
 end
 
 
-
 function logspectral_dist(s1,s2,f)
     # y = @.  10*log10(s1/s2)^2
     # integrate(f,y)^0.5 # maybe divided by f[end]^0.5
@@ -482,24 +476,10 @@ function logspectral_dist(s1,s2,f)
     mean(y)^0.5 # maybe divided by f[end]^0.5
 end
 
-
-
-# skip: number of rows to skip; nrow = number of channels per row
-ypos(y,skip,nrow,dp,dist) = -0.413*dp + (skip + floor((y-1)/nrow))*dist
-
-function depth(type,n)
+# n is the channel id (from 0 to 383)
+function depth(n)
     dp = 3840
-    if type=="cortex"
-        return ypos.(1:n, 0, 2, dp, 20)
-    elseif type=="bipolar"
-        return ypos.(1:n, 2, 2, dp, 20)
-    elseif type=="csd"
-        return ypos.(1:n, 1, 1, dp, 20)
-    elseif type=="kcsd"
-        return ypos.(1:n, 0, 1, dp, 10)
-    else
-        print("Unkown data type "*type*"\n")
-    end
+    return -floor((384-n+1)/2)*20+10
 end
 
 function relative_power_from_mean(fhm,freqs)
