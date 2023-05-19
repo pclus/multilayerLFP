@@ -51,9 +51,10 @@ layers = readdlm("../1_data/layers.dat",skipstart=5)
 n0 = 384-layers[end,1];
 nf = 384-layers[2,1]+1;
 dp = @. depth(n0:nf)
+dps = @.depth(384-layers); dps = dps[2:end,:]
 
 
-ss = 16
+ss = 20
 k = [dp[1:2:end] band_stats_pre[ss][1:2:end,3] band_stats_pre[ss][1:2:end,4]]
 writedlm("../data_subj"*string(ss)*".dat",k,' ')
 
@@ -467,7 +468,6 @@ set pale @RAINBOW;
 set xrange[0:100]; 
 set logs zcb;
 set yrange[-3840:0.0];
-set yrange[-1545.92:-245.92];
 set cbrange[0.5e-6:0.1e-4];
 unset key;
 set border lw 1;
@@ -477,13 +477,18 @@ set ylabel 'Depth [μm]'
 set colorbox
 set cbtics format '1e%T'" :-
 
+kk=1
 for subj in [8,9,10,11,12,13,15,16,18,20]
     if subj==9
         @gp :- subj "set multiplot next;" :-
     else
+        a = string(dps[end,kk])
+        b = string(dps[1,kk])
+        @gp :- subj "set object 1 rect from 0,"*a*" to 100,"*b*" front fillstyle empty lw 5"
         @gp :- subj "set title 'suj"*string(subj)*"'"
         @gp :- subj tfhm_mean_pre[subj]./sum(tfhm_mean_pre[subj]) "origin=(0, -3840.0) dx=0.1 dy=10 w image"
     end
+    kk = kk+1
 end
 p1 = @gp :- ""
 
