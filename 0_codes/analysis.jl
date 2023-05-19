@@ -52,6 +52,11 @@ n0 = 384-layers[end,1];
 nf = 384-layers[2,1]+1;
 dp = @. depth(n0:nf)
 
+
+ss = 16
+k = [dp[1:2:end] band_stats_pre[ss][1:2:end,3] band_stats_pre[ss][1:2:end,4]]
+writedlm("../data_subj"*string(ss)*".dat",k,' ')
+
 # total power, missing from the analysis...
 total_pre=Dict()
 for (i,tfhm) in tfhm_mean_pre
@@ -99,7 +104,7 @@ for subj in [8,10,11,12,13,15,16,18,20]
 end
 plot(pls...,layout=(2,5),size=(600*3,400*2),legend=:bottomright,xformatter=:auto,
 bottommargin=10mm,topmargin=2mm)
-# savefig("../3_figures/global/Fig_RelPower.pdf")
+savefig("../3_figures/global/Fig_RelPower.pdf")
 
 #-----------------------------------------------------
 # Relative power mean
@@ -226,6 +231,24 @@ plot!(xlabel="Power/Max. Power",ylabel="Depth [μm]")
 plot!(size=(300,400),xlim=(0,1.0))
 savefig("../3_figures/global/mean_relmax_power2.pdf")
 
+# Multipanel version:
+
+pls = Any[]
+pythonplot()
+for subj in 1:9
+    plot(xlabel="power/max. power",ylabel="depth [μm]") #,title="suj"*string(subj))
+    maxα = maximum(α[strider,subj])
+    maxγ = maximum(γ[strider,subj])
+    plot!(α[strider,subj],dp[strider],label="α")
+    p=plot!(γ[strider,subj],dp[strider],label="γ")
+
+    push!(pls,p)
+end
+plot(pls...,layout=(2,5),size=(600*3,400*2),legend=:bottomright,xformatter=:auto,
+bottommargin=10mm,topmargin=2mm)
+savefig("../3_figures/global/Fig_RelPower2.pdf")
+
+
 
 #-----------------------------------------------------
 #-----------------------------------------------------
@@ -335,7 +358,7 @@ savefig("../3_figures/global/Fig_TotPower.pdf")
 # plot(pα,pγ,layout=(1,2))
 
 
-
+# NEEDS TO ACCOUNT FOR ACTUAL LAYERS!
 using Gnuplot
 Gnuplot.options
 @gp "
@@ -353,7 +376,7 @@ set ylabel 'Depth [μm]'
 set colorbox
 set cbtics format '1e%T'" :-
 
-for subj in [8,9,10,11,12,13,15,16,18,20]
+for subj in [8,10,11,12,13,15,16,18,20]
     @gp :- subj "set title 'suj"*string(subj)*"'"
     @gp :- subj tfhm_mean_pre[subj]./sum(tfhm_mean_pre[subj]) "origin=(0, -1545.92) dx=0.1 dy=10 w image"
 end
@@ -412,7 +435,7 @@ Q0_pre=Dict()
 Q_post=Dict()
 Q0_post=Dict()
 
-for subj in [8,10,11,12,13,15]
+for subj in [8,10,11,12,13,15,16,18,20]
     data = "bipolar_"
     foutname = "suj"*string(subj)*"/"
     namebase = "../4_outputs/pipeline/full/"*foutname*data
@@ -434,7 +457,7 @@ for subj in [8,10,11,12,13,15]
     Q_post[subj]=readdlm(namebase*"Q_post.dat")
     Q0_post[subj]=readdlm(namebase*"Q0_post.dat")
 end
-dp = depth("bipolar",380).-2239.08
+# dp = depth("bipolar",380).-2239.08
 
 using Gnuplot
 Gnuplot.options
